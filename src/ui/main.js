@@ -107,6 +107,8 @@ class FrostveilApp {
       onNodeClick: (nodeId) => this.handleNodeClick(nodeId),
       onEdgeClick: (edge) => this.handleEdgeClick(edge),
       onHoverChange: (nodeId, edge, clientX, clientY) => {
+        this._lastPointerX = clientX;
+        this._lastPointerY = clientY;
         this.hud.updateTooltip({
           state: this.state,
           analysis: this.analysis,
@@ -717,6 +719,23 @@ class FrostveilApp {
       overlays: this.overlays,
       hintsLeft: this.hintsLeft
     });
+    if (this.input && (this.input.hoverNodeId !== -1 || this.input.hoverEdge)) {
+      if (
+        this.input.hoverEdge &&
+        this.state &&
+        !this.state.graph.hasEdge(this.input.hoverEdge[0], this.input.hoverEdge[1])
+      ) {
+        this.input.hoverEdge = null;
+      }
+      this.hud.updateTooltip({
+        state: this.state,
+        analysis: this.analysis,
+        nodeId: this.input.hoverNodeId,
+        edge: this.input.hoverEdge,
+        clientX: this._lastPointerX || 0,
+        clientY: this._lastPointerY || 0
+      });
+    }
   }
 
   _clearEndTransition() {
