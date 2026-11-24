@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frostveil - in-browser benchmark</title>
+<style>
+  :root { color-scheme: light; }
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 16px 20px 40px; color: #222; background: #fafafa; line-height: 1.45; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  h2 { font-size: 1.1rem; margin: 28px 0 8px; }
+  p.note { margin: 4px 0 12px; max-width: 70ch; }
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 12px 0; }
+  button { font: inherit; padding: 6px 14px; border: 1px solid #555; background: #fff; border-radius: 4px; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  #banner { display: none; padding: 8px 12px; border: 2px solid #990000; background: #fff0f0; margin: 10px 0; max-width: 90ch; }
+  #status { font-family: ui-monospace, monospace; font-size: 0.85rem; white-space: pre-wrap; max-height: 9em; overflow: auto; background: #fff; border: 1px solid #ccc; padding: 6px 8px; }
+  canvas { max-width: 100%; height: auto; border: 1px solid #ccc; background: #fff; display: block; }
+  .tablewrap { overflow-x: auto; max-width: 100%; }
+  table { border-collapse: collapse; font-size: 0.85rem; background: #fff; }
+  th, td { border: 1px solid #ccc; padding: 3px 8px; text-align: right; white-space: nowrap; }
+  th { background: #eee; }
+  td:first-child, th:first-child { text-align: left; }
+</style>
+</head>
+<body>
+<h1>Frostveil in-browser benchmark</h1>
+<p class="note">A lighter version of the Node benchmark: runtime for sizes up to V = 5,000 and the strategy comparison on 20 seeded levels per configuration. It uses the same code as <code>npm run bench</code> (<code>bench/suite.js</code>) and the same core through <code>bench/core.js</code>. Browser numbers are for a quick look only; the numbers in the report come from the Node run.</p>
+<div id="banner"></div>
+
+<div class="bar">
+  <button id="run">Run benchmark</button>
+  <span id="state">Idle.</span>
+</div>
+<div id="status" aria-live="polite"></div>
+
+<h2>Runtime vs input size</h2>
+<div class="bar">
+  <label><input type="checkbox" id="loglog" checked> log-log axes (uncheck for linear axes)</label>
+  <button id="dl-runtime" disabled>Download PNG</button>
+</div>
+<canvas id="c-runtime" width="960" height="540"></canvas>
+<div class="tablewrap"><table id="t-runtime"></table></div>
+
+<h2>Strategy comparison</h2>
+<div class="bar"><button id="dl-strategies" disabled>Download PNG</button></div>
+<canvas id="c-strategies" width="1060" height="560"></canvas>
+<div class="tablewrap"><table id="t-strategies"></table></div>
+
+<script type="module">
+import * as core from './core.js';
+import { runtimeBench, strategyBench } from './suite.js';
+import { runtimeScene, strategyScene, renderCanvas, downloadPng } from './charts.js';
+
+const $ = (id) => document.getElementById(id);
+const statusEl = $('status');
+let runtimeResult = null;
+let strategyResult = null;
+
+if (core.IS_MOCK === true) {
+  const b = $('banner');
+  b.style.display = 'block';
+  b.textContent = 'WARNING: bench/core.js points at bench/mockCore.js. Numbers on this page are meaningless.';
+}
+
+const log = (msg) => { statusEl.textContent += msg + '\n'; statusEl.scrollTop = statusEl.scrollHeight; };
+
+function fillTable(table, columns, rows) {
+  table.replaceChildren();
+  const head = table.createTHead().insertRow();
+  for (const c of columns) { const th = document.createElement('th'); th.textContent = c.label; head.appendChild(th); }
+  const body = table.createTBody();
+  for (const r of rows) {
+    const tr = body.insertRow();
+    for (const c of columns) { const td = tr.insertCell(); td.textContent = c.fmt ? c.fmt(r[c.key], r) : String(r[c.key]); }
+  }
+}
+const f = (d) => (v) => (v === null || v === undefined || !Number.isFinite(v) ? '-' : v.toFixed(d));
+const pct = (v) => (v === null || v === undefined ? '-' : (v * 100).toFixed(1) + '%');
+
+function drawRuntime() {
+  if (!runtimeResult) return;
+  renderCanvas($('c-runtime'), runtimeScene(runtimeResult, { logLog: $('loglog').checked }));
+}
+
+async function run() {
+  $('run').disabled = true;
+  $('dl-runtime').disabled = true;
+  $('dl-strategies').disabled = true;
+  statusEl.textContent = '';
+  const t0 = performance.now();
+  try {
+    $('state').textContent = 'Running runtime benchmark...';
+    runtimeResult = await runtimeBench({ sizes: [50, 500, 5000], extraSizes: [], warmup: 3, runs: 5, playOutMaxV: 500 }, log);
+    drawRuntime();
+    fillTable($('t-runtime'), [
+      { key: 'algorithm', label: 'algorithm' }, { key: 'V', label: 'V' }, { key: 'E', label: 'E' },
+      { key: 'median_ms', label: 'median ms', fmt: f(4) }, { key: 'q1_ms', label: 'Q1 ms', fmt: f(4) }, { key: 'q3_ms', label: 'Q3 ms', fmt: f(4) },
+      { key: 'min_ms', label: 'min ms', fmt: f(4) }, { key: 'max_ms', label: 'max ms', fmt: f(4) }, { key: 'ns_per_element', label: 'ns per (V+E)', fmt: f(1) },
+    ], runtimeResult.rows);
+    $('dl-runtime').disabled = false;
+
+    $('state').textContent = 'Running strategy comparison...';
+    const configs = [15, 30, 60].flatMap((n) => [1, 2].map((k) => ({ n, k })));
+    strategyResult = await strategyBench({ configs, seedCount: 20, randomPlayouts: 5, bruteMaxNodes: 15, bruteTimeLimitMs: 2000 }, log);
+    renderCanvas($('c-strategies'), strategyScene(strategyResult));
+    fillTable($('t-strategies'), [
+      { key: 'n', label: 'n' }, { key: 'k', label: 'k' }, { key: 'strategy', label: 'strategy' }, { key: 'levels', label: 'levels' },
+      { key: 'mean_saved_pct', label: 'mean saved %', fmt: f(1) }, { key: 'std_saved_pct', label: 'std %', fmt: f(1) },
+      { key: 'win_rate', label: 'win rate', fmt: pct }, { key: 'citadel_survival_rate', label: 'Citadel survival', fmt: pct },
+      { key: 'mean_ms_per_game', label: 'ms per game', fmt: f(3) },
+      { key: 'approx_ratio_mean', label: 'approx ratio (mean)', fmt: f(3) }, { key: 'equals_optimum_fraction', label: 'equals optimum', fmt: pct },
+    ], strategyResult.rows);
+    $('dl-strategies').disabled = false;
+    $('state').textContent = `Done in ${((performance.now() - t0) / 1000).toFixed(1)} s.`;
+  } catch (err) {
+    console.error(err);
+    $('state').textContent = 'Failed: ' + (err && err.message ? err.message : err);
+  } finally {
+    $('run').disabled = false;
+  }
+}
+
+$('run').addEventListener('click', run);
+$('loglog').addEventListener('change', drawRuntime);
+$('dl-runtime').addEventListener('click', () => downloadPng($('c-runtime'), $('loglog').checked ? 'runtime_loglog.png' : 'runtime_linear.png'));
+$('dl-strategies').addEventListener('click', () => downloadPng($('c-strategies'), 'strategies.png'));
+</script>
+</body>
+</html>
