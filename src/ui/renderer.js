@@ -99,45 +99,40 @@ export class Renderer {
     ctx.fillStyle = this._bgGradient || '#071228';
     ctx.fillRect(0, 0, w, h);
 
-    // 2. Aurora borealis & falling snow
-    this.effects.drawBackgroundEffects(ctx, w, h);
+    // 2. Stars, aurora borealis and parallax mountain ridges
+    this.effects.drawSky(ctx, w, h);
 
-    if (!state || !layout || !layout.nodes || layout.nodes.length === 0) {
-      return;
+    if (state && layout && layout.nodes && layout.nodes.length > 0 && layout.camera) {
+      // 3. Floating ice-island ground slab under the whole map
+      this._drawGround(ctx, layout);
+
+      // 4. Safe Zones overlay (underneath roads and nodes)
+      if (overlays && overlays.safeZones && analysis && analysis.safeZones) {
+        this._drawSafeZones(ctx, state, layout, analysis.safeZones);
+      }
+
+      // 5. Roads (edges) + Tarjan critical bridges + hover highlight
+      this._drawEdges(
+        ctx,
+        state,
+        layout,
+        overlays && overlays.critical && analysis ? analysis.critical : null,
+        hoverEdge,
+        activeTool
+      );
+
+      // 6. Transient edge animations (severed road ghosts & frost creep beams)
+      this.effects.drawEdgeEffects(ctx, layout);
+
+      // 7. 3D settlements & Citadel, depth-sorted back to front
+      this._drawNodes3D(ctx, state, layout, overlays, analysis, hintNodes, hoverNodeId, activeTool);
+
+      // 8. Transient node animations (beacon ignition rings)
+      this.effects.drawNodeEffects(ctx, layout);
     }
 
-    // 3. Safe Zones overlay (underneath roads and nodes)
-    if (overlays && overlays.safeZones && analysis && analysis.safeZones) {
-      this._drawSafeZones(ctx, state, layout, analysis.safeZones);
-    }
-
-    // 4. Roads (edges) + Tarjan critical bridges + hover highlight
-    this._drawEdges(
-      ctx,
-      state,
-      layout,
-      overlays && overlays.critical && analysis ? analysis.critical : null,
-      hoverEdge,
-      activeTool
-    );
-
-    // 5. Transient edge animations (severed road ghosts & frost creep beams)
-    this.effects.drawEdgeEffects(ctx, layout);
-
-    // 6. Transient node animations (beacon ignition rings)
-    this.effects.drawNodeEffects(ctx, layout);
-
-    // 7. Settlements & Citadel nodes + badges + overlays
-    this._drawNodes(
-      ctx,
-      state,
-      layout,
-      overlays,
-      analysis,
-      hintNodes,
-      hoverNodeId,
-      activeTool
-    );
+    // 9. Snow falls in front of everything for depth
+    this.effects.drawSnow(ctx, w, h);
   }
 
   /**
@@ -154,8 +149,9 @@ export class Renderer {
         : ZONE_SECURED_STYLE;
 
       // Draw soft connecting corridors between same-zone neighbors
+      const sq = layout.squash || 1;
       ctx.strokeStyle = style.fill;
-      ctx.lineWidth = layout.baseRadius * 2.3;
+      ctx.lineWidth = layout.baseRadius * 2.1 * Math.max(0.45, sq) * (layout.camera ? layout.camera.zoom : 1);
       ctx.lineCap = 'round';
       for (let i = 0; i < zone.nodes.length; i++) {
         const u = zone.nodes[i];
@@ -177,14 +173,15 @@ export class Renderer {
       let sumX = 0;
       let sumY = 0;
       let minY = Infinity;
-      const haloR = layout.baseRadius * 1.65;
+      let haloR = layout.baseRadius * 1.65;
 
       for (let i = 0; i < zone.nodes.length; i++) {
         const u = zone.nodes[i];
         const nu = layout.nodes[u];
         sumX += nu.x;
         sumY += nu.y;
-        if (nu.y < minY) minY = nu.y;
+        haloR = nu.r * 1.65;
+        if (nu.y - haloR < minY) minY = nu.y - haloR * sq;
 
         ctx.fillStyle = style.fill;
         ctx.strokeStyle = style.stroke;
@@ -195,14 +192,14 @@ export class Renderer {
           ctx.setLineDash([4, 4]);
         }
         ctx.beginPath();
-        ctx.arc(nu.x, nu.y, haloR, 0, Math.PI * 2);
+        ctx.ellipse(nu.x, nu.y, haloR, Math.max(1, haloR * sq), 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
       }
 
       // Zone summary label at centroid / top of zone
       const cx = sumX / zone.nodes.length;
-      const cy = Math.max(85, minY - haloR - 10);
+      const cy = Math.max(85, minY - 28);
       const label = zone.threatened
         ? `Zone Pop: ${zone.population}`
         : `✓ SECURED · Pop: ${zone.population}`;
@@ -262,6 +259,24 @@ export class Renderer {
       const isBridge = bridgeSet.has(`${u}_${v}`);
       const uFrosted = state.nodeState[u] === NodeState.FROSTED;
       const vFrosted = state.nodeState[v] === NodeState.FROSTED;
+      const sc = ((nu.f || 1) + (nv.f || 1)) * 0.5;
+
+      // 3D road bed: a dark wide underlay so roads read as paths carved into the ice
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(3, 9, 22, 0.55)';
+      ctx.lineWidth = 6.5 * sc;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(nu.x, nu.y);
+      ctx.lineTo(nv.x, nv.y);
+      ctx.stroke();
+
+      if (uFrosted && vFrosted) {
+        // Frozen road glow
+        ctx.strokeStyle = 'rgba(77, 228, 255, 0.18)';
+        ctx.lineWidth = 9 * sc;
+        ctx.stroke();
+      }
 
       // Critical Bridge outer glow
       if (isBridge) {
@@ -686,6 +701,474 @@ export class Renderer {
     ctx.textBaseline = 'middle';
     ctx.fillText(text, bx, by + 0.5);
     ctx.restore();
+  }
+
+  // ==================== 3D (2.5D) PROCEDURAL GEOMETRY ====================
+
+  /** Projects a world point through the layout camera into a fresh point object. */
+  _p(cam, x, y, h) {
+    return cam.project(x, y, h, { x: 0, y: 0, z: 0, f: 1 });
+  }
+
+  /** Signed screen-space area; > 0 means the face points toward the viewer. */
+  _area(pts) {
+    let a = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      const q = pts[(i + 1) % pts.length];
+      a += p.x * q.y - q.x * p.y;
+    }
+    return a;
+  }
+
+  _poly(ctx, pts) {
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+  }
+
+  /**
+   * Lambert-style brightness for a vertical face whose bottom edge runs p -> q.
+   * The light is fixed relative to the camera (upper-left, toward viewer),
+   * so faces re-shade naturally while the player orbits the map.
+   */
+  _light(cam, p, q, boost = 0) {
+    const ex = q[0] - p[0];
+    const ey = q[1] - p[1];
+    const len = Math.hypot(ex, ey) || 1;
+    const nx = ey / len;
+    const ny = -ex / len;
+    const rx = nx * cam._cosY - ny * cam._sinY;
+    const ry = nx * cam._sinY + ny * cam._cosY;
+    const dot = rx * -0.55 + ry * 0.83;
+    return 0.58 + boost + 0.5 * Math.max(0, dot);
+  }
+
+  _shade(rgb, b, a = 1) {
+    const r = Math.min(255, Math.round(rgb[0] * b));
+    const g = Math.min(255, Math.round(rgb[1] * b));
+    const bl = Math.min(255, Math.round(rgb[2] * b));
+    return a >= 1 ? `rgb(${r},${g},${bl})` : `rgba(${r},${g},${bl},${a})`;
+  }
+
+  /**
+   * Extruded prism: `ring` is a clockwise footprint (world offsets) around (wx, wy),
+   * extruded from height h0 to h1. Back faces are culled by screen winding.
+   * @returns {{x:number,y:number}[]} projected top ring
+   */
+  _prism(ctx, cam, wx, wy, ring, h0, h1, rgb, topFill, stroke, alpha = 1) {
+    const n = ring.length;
+    const B = new Array(n);
+    const T = new Array(n);
+    for (let i = 0; i < n; i++) {
+      B[i] = this._p(cam, wx + ring[i][0], wy + ring[i][1], h0);
+      T[i] = this._p(cam, wx + ring[i][0], wy + ring[i][1], h1);
+    }
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      const face = [B[i], B[j], T[j], T[i]];
+      if (this._area(face) <= 0.5) continue;
+      this._poly(ctx, face);
+      ctx.fillStyle = this._shade(rgb, this._light(cam, ring[i], ring[j]), alpha);
+      ctx.fill();
+      if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.stroke();
+      }
+    }
+    if (topFill) {
+      this._poly(ctx, T);
+      ctx.fillStyle = topFill;
+      ctx.fill();
+      if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.stroke();
+      }
+    }
+    return T;
+  }
+
+  /** Pyramid roof / spire from footprint `ring` at h0 up to an apex at hApex. */
+  _pyramid(ctx, cam, wx, wy, ring, h0, hApex, rgb, stroke, alpha = 1) {
+    const n = ring.length;
+    const R = new Array(n);
+    for (let i = 0; i < n; i++) {
+      R[i] = this._p(cam, wx + ring[i][0], wy + ring[i][1], h0);
+    }
+    const A = this._p(cam, wx, wy, hApex);
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      const face = [R[i], R[j], A];
+      if (this._area(face) <= 0.3) continue;
+      this._poly(ctx, face);
+      ctx.fillStyle = this._shade(rgb, this._light(cam, ring[i], ring[j], 0.1), alpha);
+      ctx.fill();
+      if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.stroke();
+      }
+    }
+    return A;
+  }
+
+  /** Ice crystal: hexagonal bipyramid with a ring at hMid, tips at hTop and hBot. */
+  _crystal(ctx, cam, wx, wy, ring, hMid, hTop, hBot, rgb, stroke, alpha) {
+    const n = ring.length;
+    const R = new Array(n);
+    for (let i = 0; i < n; i++) {
+      R[i] = this._p(cam, wx + ring[i][0], wy + ring[i][1], hMid);
+    }
+    const top = this._p(cam, wx, wy, hTop);
+    const bot = this._p(cam, wx, wy, hBot);
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      const upper = [R[i], R[j], top];
+      const lower = [bot, R[j], R[i]];
+      if (this._area(lower) > 0.3) {
+        this._poly(ctx, lower);
+        ctx.fillStyle = this._shade(rgb, this._light(cam, ring[i], ring[j]) * 0.8, alpha);
+        ctx.fill();
+        ctx.strokeStyle = stroke;
+        ctx.stroke();
+      }
+      if (this._area(upper) > 0.3) {
+        this._poly(ctx, upper);
+        ctx.fillStyle = this._shade(rgb, this._light(cam, ring[i], ring[j], 0.15), alpha);
+        ctx.fill();
+        ctx.strokeStyle = stroke;
+        ctx.stroke();
+      }
+    }
+    return top;
+  }
+
+  _box(a) {
+    return [[-a, -a], [a, -a], [a, a], [-a, a]];
+  }
+
+  _ngon(r, n, rot = 0) {
+    const pts = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const ang = rot + (i * Math.PI * 2) / n;
+      pts[i] = [Math.cos(ang) * r, Math.sin(ang) * r];
+    }
+    return pts;
+  }
+
+  /**
+   * Draws the map as a floating slab of glacier ice with a faint survey grid.
+   */
+  _drawGround(ctx, layout) {
+    const cam = layout.camera;
+    const b = layout.bounds;
+    const pad = layout.baseRadius * 2.4;
+    const hw = b.width / 2 + pad;
+    const hh = b.height / 2 + pad;
+    const ring = this._box(1).map((p) => [p[0] * hw, p[1] * hh]);
+
+    ctx.save();
+    // Slab sides (thickness) and top
+    const T = this._prism(ctx, cam, 0, 0, ring, -34, -2, [24, 50, 92], null, 'rgba(130, 210, 255, 0.16)');
+    const grad = ctx.createLinearGradient(T[0].x, T[0].y, T[2].x, T[2].y);
+    grad.addColorStop(0, 'rgba(22, 52, 96, 0.92)');
+    grad.addColorStop(0.5, 'rgba(12, 32, 66, 0.92)');
+    grad.addColorStop(1, 'rgba(8, 22, 48, 0.94)');
+    this._poly(ctx, T);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(150, 225, 255, 0.38)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Survey grid lines on the ice
+    ctx.strokeStyle = 'rgba(120, 200, 255, 0.07)';
+    ctx.lineWidth = 1;
+    const step = 64;
+    ctx.beginPath();
+    for (let gx = -hw + step; gx < hw; gx += step) {
+      const p = this._p(cam, gx, -hh, -2);
+      const q = this._p(cam, gx, hh, -2);
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(q.x, q.y);
+    }
+    for (let gy = -hh + step; gy < hh; gy += step) {
+      const p = this._p(cam, -hw, gy, -2);
+      const q = this._p(cam, hw, gy, -2);
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(q.x, q.y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  _platformPalette(st, isCitadel) {
+    if (st === NodeState.FROSTED) {
+      return { side: [96, 176, 214], top: '#8fd3ee', rim: '#e6fbff' };
+    }
+    if (st === NodeState.WARDED) {
+      return { side: [150, 88, 28], top: '#4a2c0c', rim: '#ffbe45' };
+    }
+    if (isCitadel) {
+      return { side: [120, 96, 40], top: '#2b2611', rim: '#ffd460' };
+    }
+    return { side: [38, 70, 122], top: '#17305c', rim: '#66b5e8' };
+  }
+
+  /**
+   * Draws every settlement as a small 3D building, depth-sorted back to front.
+   */
+  _drawNodes3D(ctx, state, layout, overlays, analysis, hintNodes, hoverNodeId, activeTool) {
+    const cam = layout.camera;
+    const sq = layout.squash;
+    const t = this.effects.reducedMotion ? 0 : this.effects.time;
+    const hintSet = new Set(hintNodes || []);
+    const artPoints =
+      overlays && overlays.critical && analysis && analysis.critical ? analysis.critical.points : null;
+    const forecastArr = overlays && overlays.forecast && analysis ? analysis.forecast : null;
+    const canHoverBeacon = activeTool === 'auto' || activeTool === 'beacon';
+
+    // Painter's algorithm: far nodes (large z) first
+    if (!this._order || this._order.length !== layout.nodes.length) {
+      this._order = layout.nodes.map((_, i) => i);
+    }
+    const order = this._order;
+    order.sort((a, b) => layout.nodes[b].z - layout.nodes[a].z);
+
+    for (let k = 0; k < order.length; k++) {
+      const node = layout.nodes[order[k]];
+      const st = state.nodeState[node.id];
+      const isHovered = canHoverBeacon && hoverNodeId === node.id;
+      const isHinted = hintSet.has(node.id);
+      const isArticulation = artPoints ? artPoints.has(node.id) : false;
+      const ry = Math.max(1, sq);
+
+      ctx.save();
+
+      // 1. Soft contact shadow on the ice
+      ctx.fillStyle = 'rgba(0, 5, 16, 0.5)';
+      ctx.beginPath();
+      ctx.ellipse(node.x + node.r * 0.35, node.y + node.r * 0.18, node.r * 1.25, Math.max(1, node.r * 1.1 * sq), 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. Hover glow
+      if (isHovered && st === NodeState.CLEAR) {
+        ctx.fillStyle = 'rgba(255, 190, 75, 0.28)';
+        ctx.beginPath();
+        ctx.ellipse(node.x, node.y, node.r + 9, Math.max(1, (node.r + 9) * sq), 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 3. Hint: pulsing ground rings + a vertical beam of light
+      if (isHinted) {
+        const pulse = 0.5 + 0.5 * Math.sin(t * 5.2);
+        const ringR = node.r + 8 + pulse * 6;
+        ctx.strokeStyle = 'rgba(255, 212, 96, 0.95)';
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.ellipse(node.x, node.y, ringR, Math.max(1, ringR * sq), 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(52, 211, 153, 0.65)';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.ellipse(node.x, node.y, ringR + 5, Math.max(1, (ringR + 5) * sq), 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        const beamH = 120 * node.f;
+        const beam = ctx.createLinearGradient(0, node.y, 0, node.y - beamH);
+        beam.addColorStop(0, `rgba(255, 212, 96, ${0.32 + pulse * 0.15})`);
+        beam.addColorStop(1, 'rgba(255, 212, 96, 0)');
+        ctx.fillStyle = beam;
+        ctx.fillRect(node.x - node.r * 0.7, node.y - beamH, node.r * 1.4, beamH);
+      }
+
+      // 4. Tarjan articulation point: dashed magenta ground ring
+      if (isArticulation) {
+        ctx.strokeStyle = '#ff69b4';
+        ctx.lineWidth = 2.4;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.ellipse(node.x, node.y, node.r + 6, Math.max(1, (node.r + 6) * sq), 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // 5. Round stone platform (12-sided extruded disc)
+      const pal = this._platformPalette(st, node.isCitadel);
+      this._prism(
+        ctx, cam, node.wx, node.wy, this._ngon(node.rw * 0.98, 12), -5, 3,
+        pal.side, pal.top, isHovered ? '#ffd460' : pal.rim
+      );
+
+      // 6. The building itself
+      const topH = this._drawBuilding(ctx, cam, node, st, t);
+
+      // 7. Badges & labels (always screen-aligned for legibility)
+      this._drawPopulationBadge(ctx, { x: node.x + node.r * 0.25, y: node.y + node.r * 0.15 * ry, r: node.r, population: node.population, isCitadel: node.isCitadel });
+
+      const gx = node.x - node.r * 1.0;
+      const gy = node.y + node.r * 0.1;
+      if (st === NodeState.FROSTED) {
+        this._drawCornerGlyph(ctx, gx, gy, '❄', '#062038', '#7ceeff');
+      } else if (st === NodeState.WARDED) {
+        this._drawCornerGlyph(ctx, gx, gy, '🔥', '#3b1d04', '#ffc14d');
+      } else if (isArticulation) {
+        this._drawCornerGlyph(ctx, gx, gy, '◆', '#3a0b28', '#ff79c6');
+      }
+
+      if (node.isCitadel) {
+        this._drawCitadelLabel(ctx, { x: node.x, y: node.y - node.r + node.r * sq + 4, r: node.r }, st === NodeState.FROSTED);
+      }
+
+      if (forecastArr && st === NodeState.CLEAR) {
+        if (cam.tilt < 0.15) {
+          this._drawForecastBadge(ctx, node, forecastArr[node.id]);
+        } else {
+          const tp = this._p(cam, node.wx, node.wy, topH + node.rw * 0.55);
+          this._drawForecastBadge(
+            ctx,
+            { x: tp.x - node.r * 0.35, y: tp.y + node.r * 0.55, r: node.r },
+            forecastArr[node.id]
+          );
+        }
+      }
+
+      ctx.restore();
+    }
+  }
+
+  /**
+   * Draws the 3D building for one node and returns the height of its highest point.
+   */
+  _drawBuilding(ctx, cam, node, st, t) {
+    const rw = node.rw;
+    const wx = node.wx;
+    const wy = node.wy;
+    const frosted = st === NodeState.FROSTED;
+    const warded = st === NodeState.WARDED;
+    const edge = 'rgba(5, 12, 28, 0.5)';
+
+    // ---- The Citadel: gold keep with corner merlons and a central spire ----
+    if (node.isCitadel) {
+      const a = rw * 0.42;
+      const H = rw * 1.35;
+      const wall = frosted ? [165, 220, 240] : [232, 196, 104];
+      this._prism(ctx, cam, wx, wy, this._box(a), 3, H, wall, this._shade(wall, 1.05), edge);
+
+      const m = a * 0.32;
+      const centreZ = this._p(cam, wx, wy, H).z;
+      const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+      const front = [];
+      for (let i = 0; i < corners.length; i++) {
+        const mx = wx + corners[i][0] * (a - m);
+        const my = wy + corners[i][1] * (a - m);
+        if (this._p(cam, mx, my, H).z > centreZ) {
+          this._prism(ctx, cam, mx, my, this._box(m), H, H + rw * 0.25, wall, this._shade(wall, 1.12), edge);
+        } else {
+          front.push([mx, my]);
+        }
+      }
+      const spireCol = frosted ? [205, 245, 255] : [255, 214, 90];
+      const tip = this._pyramid(ctx, cam, wx, wy, this._box(a * 0.48), H, H + rw * 1.0, spireCol, edge);
+      for (let i = 0; i < front.length; i++) {
+        this._prism(ctx, cam, front[i][0], front[i][1], this._box(m), H, H + rw * 0.25, wall, this._shade(wall, 1.12), edge);
+      }
+
+      // Glowing gem on the spire tip
+      const glow = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, rw * 0.6 * node.f);
+      glow.addColorStop(0, frosted ? 'rgba(180, 245, 255, 0.9)' : 'rgba(255, 236, 150, 0.95)');
+      glow.addColorStop(1, 'rgba(255, 220, 120, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(tip.x, tip.y, rw * 0.6 * node.f, 0, Math.PI * 2);
+      ctx.fill();
+      return H + rw * 1.0;
+    }
+
+    // ---- Frosted settlement: a jagged ice crystal has swallowed the hut ----
+    if (frosted) {
+      const mid = this._p(cam, wx, wy, rw * 0.8);
+      const glowR = rw * 1.5 * node.f;
+      const glow = ctx.createRadialGradient(mid.x, mid.y, 0, mid.x, mid.y, glowR);
+      glow.addColorStop(0, 'rgba(130, 240, 255, 0.35)');
+      glow.addColorStop(1, 'rgba(77, 228, 255, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(mid.x, mid.y, glowR, 0, Math.PI * 2);
+      ctx.fill();
+
+      const shimmer = 0.92 + 0.08 * Math.sin(t * 3 + node.id);
+      this._crystal(
+        ctx, cam, wx, wy, this._ngon(rw * 0.5, 6, node.id * 0.7), rw * 0.7, rw * 1.8, rw * 0.08,
+        [150, 225, 255].map((c) => c * shimmer), 'rgba(230, 252, 255, 0.85)', 0.92
+      );
+      return rw * 1.8;
+    }
+
+    // ---- Clear or warded settlement: a cabin whose height grows with population ----
+    const a = rw * 0.36;
+    const H = rw * (0.42 + node.population * 0.04);
+    const wall = warded ? [246, 214, 160] : [210, 226, 244];
+    const roof = warded ? [200, 120, 40] : [158, 64, 58];
+    this._prism(ctx, cam, wx, wy, this._box(a), 3, H, wall, null, edge);
+
+    // Warm window on the wall closest to the camera
+    const sides = [[0, a], [a, 0], [0, -a], [-a, 0]];
+    let best = null;
+    for (let i = 0; i < sides.length; i++) {
+      const p = this._p(cam, wx + sides[i][0] * 1.01, wy + sides[i][1] * 1.01, H * 0.5);
+      if (!best || p.z < best.z) best = p;
+    }
+    const winR = Math.max(1.5, rw * 0.13 * node.f);
+    ctx.fillStyle = warded ? '#ff8a1c' : '#ffc861';
+    ctx.shadowColor = '#ffb347';
+    ctx.shadowBlur = 8;
+    ctx.fillRect(best.x - winR, best.y - winR, winR * 2, winR * 2);
+    ctx.shadowBlur = 0;
+
+    // Snow-dusted pyramid roof
+    const apexH = H + rw * 0.52;
+    const apex = this._pyramid(ctx, cam, wx, wy, this._box(a * 1.22), H, apexH, roof, edge);
+    const capR = Math.max(1.2, rw * 0.12 * node.f);
+    ctx.fillStyle = 'rgba(240, 250, 255, 0.9)';
+    ctx.beginPath();
+    ctx.arc(apex.x, apex.y + capR * 0.6, capR, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (!warded) {
+      return apexH;
+    }
+
+    // ---- Beacon flame floating above the warded cabin ----
+    const flicker = 1 + Math.sin(t * 9 + node.id * 1.7) * 0.08;
+    const fp = this._p(cam, wx, wy, apexH + rw * 0.5);
+    const glowR = rw * 1.8 * node.f * flicker;
+    const glow = ctx.createRadialGradient(fp.x, fp.y, 0, fp.x, fp.y, glowR);
+    glow.addColorStop(0, 'rgba(255, 196, 82, 0.55)');
+    glow.addColorStop(1, 'rgba(255, 140, 20, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(fp.x, fp.y, glowR, 0, Math.PI * 2);
+    ctx.fill();
+
+    const s = rw * 0.36 * node.f * flicker;
+    const fl = ctx.createLinearGradient(fp.x, fp.y - s * 1.6, fp.x, fp.y + s * 0.6);
+    fl.addColorStop(0, '#fff3b0');
+    fl.addColorStop(0.5, '#ffb340');
+    fl.addColorStop(1, '#ff5a1f');
+    ctx.fillStyle = fl;
+    ctx.beginPath();
+    ctx.moveTo(fp.x, fp.y - s * 1.6);
+    ctx.quadraticCurveTo(fp.x + s, fp.y - s * 0.2, fp.x, fp.y + s * 0.6);
+    ctx.quadraticCurveTo(fp.x - s, fp.y - s * 0.2, fp.x, fp.y - s * 1.6);
+    ctx.fill();
+    return apexH + rw * 0.9;
   }
 
   _roundRect(ctx, x, y, w, h, r) {

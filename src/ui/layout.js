@@ -27,10 +27,10 @@ export function computeLayout(level, width, height) {
   }
 
   const isCompact = width < 760;
-  const padTop = isCompact ? 136 : 116;
-  const padBottom = isCompact ? 148 : 225;
-  const padLeft = width > 860 ? 205 : Math.max(44, width * 0.065);
-  const padRight = Math.max(48, width * 0.065);
+  const padTop = isCompact ? 118 : 108;
+  const padBottom = isCompact ? 124 : 132;
+  const padLeft = Math.max(52, Math.round(width * 0.085));
+  const padRight = Math.max(52, Math.round(width * 0.085));
 
   const availW = Math.max(160, width - padLeft - padRight);
   const availH = Math.max(160, height - padTop - padBottom);
@@ -113,6 +113,16 @@ export function pickNode(px, py, layout, slop = 7) {
     if (distSq <= hitR * hitR && distSq < bestDistSq) {
       bestDistSq = distSq;
       bestId = node.id;
+    }
+    // 3D view: the building rises above its base, so also test the building centre
+    if (typeof node.hitY === 'number') {
+      const dyB = py - node.hitY;
+      const distB = dx * dx + dyB * dyB;
+      const hitB = node.hitR + slop * 0.5;
+      if (distB <= hitB * hitB && distB < bestDistSq) {
+        bestDistSq = distB;
+        bestId = node.id;
+      }
     }
   }
 

@@ -175,14 +175,96 @@ export class EffectsManager {
    * @param {number} height
    */
   drawBackgroundEffects(ctx, width, height) {
+    this.drawSky(ctx, width, height);
+    this.drawSnow(ctx, width, height);
+  }
+
+  /**
+   * Draws twinkling stars, aurora ribbons, and two parallax mountain ridges that
+   * slide sideways as the camera orbits (sells the 3D depth).
+   */
+  drawSky(ctx, width, height) {
+    const t = this.reducedMotion ? 0 : this.time;
+    const yaw = this.cameraYaw || 0;
+
+    if (!this._stars) {
+      this._stars = Array.from({ length: 110 }, (_, i) => ({
+        x: ((i * 7919) % 1000) / 1000,
+        y: ((i * 4447) % 1000) / 1000,
+        r: 0.5 + (i % 3) * 0.45,
+        phase: i * 0.77
+      }));
+    }
+
+    ctx.save();
+    // Stars (slow parallax with yaw)
+    ctx.fillStyle = '#e8f6ff';
+    const starShift = yaw * width * 0.03;
+    for (let i = 0; i < this._stars.length; i++) {
+      const s = this._stars[i];
+      let sx = (s.x * width + starShift) % width;
+      if (sx < 0) sx += width;
+      ctx.globalAlpha = 0.35 + 0.35 * Math.sin(t * 1.6 + s.phase);
+      ctx.beginPath();
+      ctx.arc(sx, s.y * height * 0.55, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    this._drawAurora(ctx, width, height, t);
+
+    // Parallax mountain ridges
+    this._drawRidge(ctx, width, height, height * 0.4, 70, yaw * width * 0.08, 'rgba(32, 56, 102, 0.55)', 1.3);
+    this._drawRidge(ctx, width, height, height * 0.47, 55, yaw * width * 0.16, 'rgba(15, 30, 62, 0.85)', 2.1);
+  }
+
+  _drawRidge(ctx, width, height, baseY, amp, offset, color, seed) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, height);
+    const step = Math.max(14, width / 90);
+    for (let x = 0; x <= width + step; x += step) {
+      const u = (x + offset) / width;
+      const y =
+        baseY -
+        amp *
+          (0.55 +
+            0.25 * Math.sin(u * 6.3 * 1.0 + seed) +
+            0.15 * Math.sin(u * 6.3 * 2.7 + seed * 2) +
+            0.08 * Math.abs(Math.sin(u * 6.3 * 7.1 + seed * 3)));
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(width, height);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(170, 225, 255, 0.12)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawSnow(ctx, width, height) {
+    ctx.save();
+    ctx.fillStyle = '#d9f4ff';
+    for (let i = 0; i < this.snow.length; i++) {
+      const p = this.snow[i];
+      ctx.globalAlpha = p.alpha;
+      ctx.beginPath();
+      ctx.arc(p.x * width, p.y * height, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  _drawAurora(ctx, width, height, t) {
     // 1. Aurora borealis ribbons across the upper sky
     const bands = [
       { yBase: height * 0.20, amp: 24, freq: 0.0032, speed: 0.55, color: 'rgba(45, 212, 191, 0.09)', thickness: 64 },
       { yBase: height * 0.28, amp: 30, freq: 0.0026, speed: -0.42, color: 'rgba(77, 228, 255, 0.08)', thickness: 76 },
       { yBase: height * 0.15, amp: 18, freq: 0.0040, speed: 0.35, color: 'rgba(139, 92, 246, 0.07)', thickness: 56 }
     ];
-
-    const t = this.reducedMotion ? 0 : this.time;
 
     ctx.save();
     for (let b = 0; b < bands.length; b++) {
@@ -204,16 +286,6 @@ export class EffectsManager {
       ctx.lineWidth = band.thickness;
       ctx.lineCap = 'round';
       ctx.stroke();
-    }
-
-    // 2. Slow falling snow particles
-    ctx.fillStyle = '#d9f4ff';
-    for (let i = 0; i < this.snow.length; i++) {
-      const p = this.snow[i];
-      ctx.globalAlpha = p.alpha;
-      ctx.beginPath();
-      ctx.arc(p.x * width, p.y * height, p.r, 0, Math.PI * 2);
-      ctx.fill();
     }
     ctx.restore();
   }
