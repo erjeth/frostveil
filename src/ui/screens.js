@@ -49,6 +49,31 @@ export class ScreenManager {
 
     this._customFreePlayLevel = null;
     this._bindDomEvents();
+    this._attachTilt(document.querySelector('.title-card'), 7);
+    this._attachTilt(document.querySelector('.freeplay-card'), 5);
+  }
+
+  /**
+   * Interactive 3D card tilt: the element rotates toward the pointer with a moving glare.
+   * Disabled when the user prefers reduced motion.
+   */
+  _attachTilt(el, maxDeg) {
+    if (!el) return;
+    el.classList.add('tilt');
+    const reduced =
+      typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) return;
+    el.addEventListener('pointermove', (e) => {
+      const r = el.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width - 0.5;
+      const py = (e.clientY - r.top) / r.height - 0.5;
+      el.style.transform = `perspective(900px) rotateX(${(-py * maxDeg).toFixed(2)}deg) rotateY(${(px * maxDeg).toFixed(2)}deg) translateY(-3px)`;
+      el.style.setProperty('--gx', `${((px + 0.5) * 100).toFixed(1)}%`);
+      el.style.setProperty('--gy', `${((py + 0.5) * 100).toFixed(1)}%`);
+    });
+    el.addEventListener('pointerleave', () => {
+      el.style.transform = '';
+    });
   }
 
   /**
@@ -263,15 +288,15 @@ export class ScreenManager {
       card.innerHTML = `
         <div>
           <div class="level-card-top">
-            <span class="level-num">Level ${spec.id}</span>
+            <span class="level-num">Realm ${spec.id}</span>
             <span class="level-stars">${lockBadge}</span>
           </div>
           <div class="level-name">${spec.name}</div>
           <div class="level-meta">
-            <span>🏘 Nodes: <strong>${spec.n}</strong></span>
-            <span>⚡ Actions: <strong>${spec.k}/turn</strong></span>
-            <span>❄️ Frost: <strong>${spec.sources}</strong></span>
-            <span>🎯 Target: <strong>${spec.targetPercent}%</strong></span>
+            <span>Nodes <strong>${spec.n}</strong></span>
+            <span>Actions <strong>${spec.k}/t</strong></span>
+            <span>Origins <strong>${spec.sources}</strong></span>
+            <span>Goal <strong>${spec.targetPercent}%</strong></span>
           </div>
         </div>
         <div class="level-best">${bestLine}</div>
@@ -286,6 +311,9 @@ export class ScreenManager {
       }
 
       grid.appendChild(card);
+      if (unlocked) {
+        this._attachTilt(card, 14);
+      }
     }
   }
 

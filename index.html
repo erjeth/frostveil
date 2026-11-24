@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="./css/style.css" />
 </head>
 <body>
-  <!-- Full-viewport interactive and background canvas -->
+  <!-- Full-viewport interactive 2.5D / 3D canvas -->
   <canvas
     id="game-canvas"
     aria-label="Frostveil strategy game map. Use mouse, touch, or keyboard shortcuts to light beacons and sever roads."
@@ -19,37 +19,47 @@
     Welcome to Frostveil.
   </div>
 
-  <!-- Global floating top-right utility controls (Audio Mute & FPS monitor toggle) -->
+  <!-- Global floating sound toggle (visible on non-game screens; neatly docked on game screen) -->
   <div id="global-controls" class="global-controls">
-    <button id="btn-mute" type="button" class="icon-btn" aria-label="Toggle sound effects" title="Toggle Sound (M)">
-      <span id="mute-icon" aria-hidden="true">🔊</span>
-      <span id="mute-label" class="btn-sublabel">Sound On</span>
+    <button id="btn-mute" type="button" class="util-btn" aria-label="Toggle sound effects" title="Toggle Sound (M)">
+      <span id="mute-icon" class="svg-icon" aria-hidden="true">🔊</span>
+      <span id="mute-label" class="btn-sublabel">Audio</span>
     </button>
   </div>
 
   <!-- ==================== 1. TITLE SCREEN ==================== -->
   <section id="screen-title" class="screen active" aria-labelledby="title-heading">
-    <div class="title-card glass-panel">
-      <div class="title-emblem" aria-hidden="true">❄️</div>
+    <div class="title-card glass-panel tilt">
+      <div class="title-crest" aria-hidden="true">
+        <svg viewBox="0 0 64 64" width="52" height="52" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="32,4 44,20 60,32 44,44 32,60 20,44 4,32 20,20" stroke="#7ceeff" fill="rgba(77,228,255,0.12)" />
+          <polygon points="32,14 40,26 50,32 40,38 32,50 24,38 14,32 24,26" stroke="#ffd460" fill="rgba(255,212,96,0.16)" />
+          <circle cx="32" cy="32" r="4" fill="#ffffff" stroke="none" />
+        </svg>
+      </div>
+      <div class="title-eyebrow">ARCTIC CONTAINMENT STRATEGY</div>
       <h1 id="title-heading" class="game-title">FROSTVEIL</h1>
-      <p class="game-subtitle">Ward the Settlements. Sever the Frost. Protect the Citadel.</p>
+      <p class="game-subtitle">Ward the Settlements · Sever the Frost · Protect the Citadel</p>
       <p class="game-tagline">
-        A turn-based graph strategy game of containment across an arctic realm.
+        Command the realm’s defenses across an interactive 3D glacier network before the winter consumes all.
       </p>
       <div class="title-actions">
         <button id="btn-title-play" type="button" class="btn btn-primary btn-lg">
-          ▶ Play Game
+          <svg class="btn-svg" viewBox="0 0 20 20" fill="currentColor"><polygon points="5,3 17,10 5,17"/></svg>
+          <span>Campaign &amp; Free Play</span>
         </button>
         <button id="btn-title-arena" type="button" class="btn btn-secondary btn-lg">
-          ⚔ Strategy Arena
+          <svg class="btn-svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 15L9 9L13 13L17 6"/><polyline points="13,6 17,6 17,10"/></svg>
+          <span>Strategy Arena</span>
         </button>
         <button id="btn-title-howto" type="button" class="btn btn-ghost btn-lg">
-          📖 How to Play
+          <svg class="btn-svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="7"/><path d="M9.2 7.5a1.5 1.5 0 0 1 2.8.8c0 1.2-1.8 1.4-1.8 2.7"/><circle cx="10.2" cy="14" r="0.9" fill="currentColor"/></svg>
+          <span>Codex &amp; Rules</span>
         </button>
       </div>
       <div class="title-footer">
-        <span>Design &amp; Analysis of Algorithms (EF234405)</span>
-        <span>•</span>
+        <span>EF234405 Design &amp; Analysis of Algorithms</span>
+        <span class="dot-sep"></span>
         <span>BFS · DFS · Tarjan · Kruskal · Greedy · Brute-Force</span>
       </div>
     </div>
@@ -60,22 +70,26 @@
     <div class="modal-container glass-panel wide-panel">
       <header class="panel-header">
         <div>
-          <h2 id="levels-heading" class="panel-title">Select Expedition</h2>
-          <p class="panel-subtitle">Choose one of the 8 campaign realms or configure a custom Free Play graph.</p>
+          <div class="panel-eyebrow">EXPEDITION COMMAND</div>
+          <h2 id="levels-heading" class="panel-title">Select Realm</h2>
         </div>
         <div class="header-actions">
           <label class="toggle-control" title="Unlock all campaign levels for grading and demonstration">
             <input type="checkbox" id="chk-unlock-all" />
-            <span>Unlock All Levels (Demo)</span>
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span>Unlock All (Demo)</span>
           </label>
-          <button id="btn-levels-back" type="button" class="btn btn-ghost">← Title</button>
+          <button id="btn-levels-back" type="button" class="btn btn-ghost btn-sm">← Title</button>
         </div>
       </header>
 
       <div class="levels-layout">
         <!-- 8 Campaign Levels Grid -->
         <div class="campaign-section">
-          <h3 class="section-label">Campaign Realms (Levels 1–8)</h3>
+          <div class="section-header-row">
+            <h3 class="section-label">Campaign Realms (I – VIII)</h3>
+            <span class="section-hint">Win each realm to unlock the next</span>
+          </div>
           <div id="level-cards-grid" class="level-cards-grid" role="list">
             <!-- Populated dynamically by screens.js -->
           </div>
@@ -84,11 +98,11 @@
         <!-- Free Play Generator Card -->
         <aside class="freeplay-card glass-subpanel" aria-labelledby="freeplay-heading">
           <div class="freeplay-header">
-            <h3 id="freeplay-heading">♾️ Free Play Generator</h3>
-            <span class="badge badge-cyan">Custom Graph</span>
+            <h3 id="freeplay-heading">Custom Realm</h3>
+            <span class="badge badge-cyan">Kruskal MST</span>
           </div>
           <p class="freeplay-desc">
-            Procedurally generate a deterministic road network using Kruskal MST and seeded Mulberry32 PRNG.
+            Generate a deterministic road network with seeded Mulberry32 PRNG.
           </p>
 
           <div class="form-group">
@@ -101,7 +115,7 @@
 
           <div class="form-group">
             <label for="fp-actions">
-              <span>Actions per Turn (k)</span>
+              <span>Actions / Turn (k)</span>
               <strong id="fp-actions-val">2</strong>
             </label>
             <input type="range" id="fp-actions" min="1" max="3" step="1" value="2" />
@@ -109,7 +123,7 @@
 
           <div class="form-group">
             <label for="fp-sources">
-              <span>Initial Frost Sources</span>
+              <span>Frost Origins</span>
               <strong id="fp-sources-val">1</strong>
             </label>
             <input type="range" id="fp-sources" min="1" max="3" step="1" value="1" />
@@ -117,73 +131,105 @@
 
           <div class="form-group">
             <label for="fp-target">
-              <span>Target Saved Population (%)</span>
+              <span>Target Saved (%)</span>
               <strong id="fp-target-val">60%</strong>
             </label>
             <input type="range" id="fp-target" min="35" max="85" step="5" value="60" />
           </div>
 
           <div class="form-group">
-            <label for="fp-seed">Deterministic Seed</label>
+            <label for="fp-seed">PRNG Seed</label>
             <div class="seed-input-row">
               <input type="number" id="fp-seed" value="2026" min="1" max="999999999" />
-              <button id="btn-fp-random-seed" type="button" class="btn btn-secondary btn-sm">
-                🎲 Random Seed
+              <button id="btn-fp-random-seed" type="button" class="btn btn-secondary btn-sm" title="Generate random seed">
+                Random
               </button>
             </div>
           </div>
 
           <button id="btn-fp-launch" type="button" class="btn btn-primary btn-block">
-            ▶ Launch Free Play
+            Launch Custom Realm
           </button>
         </aside>
       </div>
     </div>
   </section>
 
-  <!-- ==================== 3. GAME SCREEN (HUD + CONTROLS) ==================== -->
+  <!-- ==================== 3. GAME SCREEN (SLEEK TACTICAL HUD) ==================== -->
   <section id="screen-game" class="screen screen-passthrough" aria-label="Active Game HUD" hidden>
-    <!-- Top HUD Bar -->
-    <header class="hud-topbar glass-panel">
-      <div class="hud-left">
+    <!-- Top HUD Architecture: 3 clean floating pods instead of a single bloated bar -->
+    <header class="hud-topbar">
+      <!-- Pod 1: Realm Identity & Compact Legend Trigger -->
+      <div class="hud-pod hud-pod-identity glass-panel">
         <div class="hud-level-badge">
-          <span id="hud-level-title" class="hud-level-name">Level 1: Frostgate</span>
-          <span id="hud-seed-badge" class="hud-seed">Seed #1001</span>
+          <span id="hud-level-title" class="hud-level-name">Level 1: Outpost of Dawn</span>
+          <span id="hud-seed-badge" class="hud-seed">Seed #1001 · n=12</span>
         </div>
-        <div class="hud-stat-pill">
+        <div class="hud-legend-trigger" tabindex="0" aria-label="Map Legend and Camera Controls">
+          <span class="legend-trigger-icon">?</span>
+          <div class="hud-legend-popover glass-panel" aria-label="Map Legend">
+            <div class="popover-section-title">Map Legend</div>
+            <div class="legend-item"><span class="legend-dot dot-clear"></span><span>Clear Settlement</span></div>
+            <div class="legend-item"><span class="legend-dot dot-warded"></span><span>Warded (Beacon Lit)</span></div>
+            <div class="legend-item"><span class="legend-dot dot-frosted"></span><span>Frosted (Infected)</span></div>
+            <div class="legend-item"><span class="legend-dot dot-citadel"></span><span>The Citadel (Keep Safe)</span></div>
+            <div class="popover-divider"></div>
+            <div class="popover-section-title">Camera Controls</div>
+            <div class="popover-hint">Drag map to orbit · Scroll to zoom · Press <kbd>V</kbd> for 2D/3D</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pod 2: Center Tactical Status & Population Gauge -->
+      <div class="hud-pod hud-pod-center glass-panel">
+        <div class="hud-metric">
           <span class="stat-label">Turn</span>
           <strong id="hud-turn" class="stat-value">1</strong>
         </div>
-        <div class="hud-stat-pill">
+
+        <div class="hud-vsep"></div>
+
+        <div class="hud-metric">
           <span class="stat-label">Actions</span>
           <strong id="hud-actions" class="stat-value">1 / 1</strong>
         </div>
-        <div class="hud-stat-pill" id="hud-citadel-pill">
+
+        <div class="hud-vsep"></div>
+
+        <!-- Population Gauge -->
+        <div class="hud-gauge">
+          <div class="pop-header">
+            <span id="hud-pop-text">Saved 65/71 (92%)</span>
+            <span id="hud-target-text" class="target-label">Goal 50%</span>
+          </div>
+          <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="89" id="hud-progress-bar">
+            <div id="hud-progress-fill" class="progress-fill" style="width: 89%;"></div>
+            <div id="hud-target-marker" class="progress-target-marker" style="left: 50%;" title="Target Percentage"></div>
+          </div>
+        </div>
+
+        <div class="hud-vsep"></div>
+
+        <div class="hud-metric" id="hud-citadel-pill">
           <span class="stat-label">Citadel</span>
-          <strong id="hud-citadel" class="stat-value status-safe">♛ Safe</strong>
+          <strong id="hud-citadel" class="stat-value status-safe">Safe</strong>
         </div>
       </div>
 
-      <!-- Center Progress Bar: Saved Population vs Target -->
-      <div class="hud-center">
-        <div class="pop-header">
-          <span id="hud-pop-text">Saved: 40 / 45 (89%)</span>
-          <span id="hud-target-text" class="target-label">Target: 50%</span>
-        </div>
-        <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="89" id="hud-progress-bar">
-          <div id="hud-progress-fill" class="progress-fill" style="width: 89%;"></div>
-          <div id="hud-target-marker" class="progress-target-marker" style="left: 50%;" title="Target Percentage"></div>
-        </div>
-      </div>
-
-      <!-- Right quick stats & menu -->
-      <div class="hud-right">
+      <!-- Pod 3: Top-Right Utility & View Capsule -->
+      <div class="hud-pod hud-pod-utils glass-panel">
         <span id="hud-fps" class="fps-badge" title="Canvas frame rate">60 FPS</span>
-        <button id="btn-game-restart" type="button" class="btn btn-ghost btn-sm" title="Restart Level (R)">
-          ↻ Restart <kbd>R</kbd>
+        <button id="btn-view-3d" type="button" class="util-chip" aria-pressed="true" title="Toggle 3D / 2D view (V)">
+          <span>3D</span>
         </button>
-        <button id="btn-game-menu" type="button" class="btn btn-ghost btn-sm" title="Return to Level Select (Esc)">
-          ☰ Menu <kbd>Esc</kbd>
+        <button id="btn-view-reset" type="button" class="util-chip" title="Reset camera angle (0)">
+          <span>Reset View</span>
+        </button>
+        <button id="btn-game-restart" type="button" class="util-chip" title="Restart Level (R)">
+          <span>Restart</span>
+        </button>
+        <button id="btn-game-menu" type="button" class="util-chip" title="Return to Level Select (Esc)">
+          <span>Realms</span>
         </button>
       </div>
     </header>
@@ -191,61 +237,66 @@
     <!-- Floating feedback banner for invalid clicks / notifications -->
     <div id="hud-toast" class="hud-toast" role="status" aria-live="assertive" hidden></div>
 
-    <!-- Legend pill on left side -->
-    <aside class="hud-legend glass-panel" aria-label="Map Legend">
-      <div class="legend-item"><span class="legend-icon icon-clear">🏠</span><span>Clear Settlement</span></div>
-      <div class="legend-item"><span class="legend-icon icon-warded">🔥</span><span>Warded (Beacon)</span></div>
-      <div class="legend-item"><span class="legend-icon icon-frosted">❄️</span><span>Frosted</span></div>
-      <div class="legend-item"><span class="legend-icon icon-citadel">♛</span><span>The Citadel</span></div>
-    </aside>
-
     <!-- Hover / Long-press node & edge inspection tooltip -->
     <div id="map-tooltip" class="map-tooltip glass-panel" role="tooltip" hidden></div>
 
-    <!-- Bottom Action & Overlays Toolbar -->
-    <footer class="hud-bottombar glass-panel">
-      <!-- Tool Selection -->
-      <div class="toolbar-group" role="group" aria-label="Warden Tools">
-        <span class="group-caption">Tool:</span>
-        <button id="btn-tool-auto" type="button" class="btn btn-tool active" title="Auto Tool: Click node for Beacon, click road to Sever">
-          ✨ Auto
+    <!-- Bottom Tactical Dock: Sleek single-row layout divided into 3 balanced capsules -->
+    <footer class="hud-bottombar">
+      <!-- Capsule 1: Segmented Mode Switcher -->
+      <div class="dock-capsule dock-tools glass-panel" role="group" aria-label="Warden Tools">
+        <button id="btn-tool-auto" type="button" class="seg-btn btn-tool active" title="Auto Mode: Click settlement for Beacon, click road to Sever">
+          <svg class="dock-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 2v14M2 9h14"/><circle cx="9" cy="9" r="3"/></svg>
+          <span>Auto</span>
         </button>
-        <button id="btn-tool-beacon" type="button" class="btn btn-tool" title="Light Beacon on a Clear settlement (Shortcut: 1)">
-          🔥 Beacon <kbd>1</kbd>
+        <button id="btn-tool-beacon" type="button" class="seg-btn btn-tool" title="Light Beacon on a Clear settlement (Shortcut: 1)">
+          <svg class="dock-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 2C9 2 14 6.5 14 10.5a5 5 0 0 1-10 0C4 6.5 9 2 9 2Z"/></svg>
+          <span>Beacon</span>
+          <kbd>1</kbd>
         </button>
-        <button id="btn-tool-sever" type="button" class="btn btn-tool" title="Sever an existing road (Shortcut: 2)">
-          ✂️ Sever <kbd>2</kbd>
-        </button>
-      </div>
-
-      <div class="toolbar-divider"></div>
-
-      <!-- Algorithmic Overlays & Hint -->
-      <div class="toolbar-group" role="group" aria-label="Algorithm Overlays and Hint">
-        <span class="group-caption">Analysis:</span>
-        <button id="btn-overlay-forecast" type="button" class="btn btn-overlay" aria-pressed="false" title="BFS Frost Arrival Forecast (Shortcut: F)">
-          ⏱ Forecast <kbd>F</kbd>
-        </button>
-        <button id="btn-overlay-safezones" type="button" class="btn btn-overlay" aria-pressed="false" title="DFS Connected Safe Zones (Shortcut: Z)">
-          🛡 Safe Zones <kbd>Z</kbd>
-        </button>
-        <button id="btn-overlay-critical" type="button" class="btn btn-overlay" aria-pressed="false" title="Tarjan Articulation Points &amp; Bridges (Shortcut: C)">
-          ⚠️ Critical <kbd>C</kbd>
-        </button>
-        <button id="btn-game-hint" type="button" class="btn btn-hint" title="Articulation-Aware Greedy Hint (Shortcut: H)">
-          💡 Hint (<span id="hud-hints-left">3</span>) <kbd>H</kbd>
+        <button id="btn-tool-sever" type="button" class="seg-btn btn-tool" title="Sever an existing road (Shortcut: 2)">
+          <svg class="dock-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="5" cy="13" r="2.2"/><circle cx="13" cy="13" r="2.2"/><path d="M6.6 11.4L14 3M11.4 11.4L4 3"/></svg>
+          <span>Sever</span>
+          <kbd>2</kbd>
         </button>
       </div>
 
-      <div class="toolbar-divider"></div>
-
-      <!-- Turn Execution -->
-      <div class="toolbar-group" role="group" aria-label="Turn Controls">
-        <button id="btn-game-undo" type="button" class="btn btn-secondary" disabled title="Undo last action in current turn (Shortcut: U)">
-          ↶ Undo <kbd>U</kbd>
+      <!-- Capsule 2: Algorithmic Lenses & Hint -->
+      <div class="dock-capsule dock-lenses glass-panel" role="group" aria-label="Algorithm Overlays and Hint">
+        <button id="btn-overlay-forecast" type="button" class="lens-btn btn-overlay" aria-pressed="false" title="BFS Frost Arrival Forecast (Shortcut: F)">
+          <svg class="dock-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="9" r="6.5"/><polyline points="9,5 9,9 12,11"/></svg>
+          <span>Forecast</span>
+          <kbd>F</kbd>
         </button>
-        <button id="btn-game-endturn" type="button" class="btn btn-primary" title="End Warden Phase and advance frost (Shortcut: E)">
-          ⏭ End Turn <kbd>E</kbd>
+        <button id="btn-overlay-safezones" type="button" class="lens-btn btn-overlay" aria-pressed="false" title="DFS Connected Safe Zones (Shortcut: Z)">
+          <svg class="dock-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 2L15 4.5V9c0 3.8-2.6 6.3-6 7.5-3.4-1.2-6-3.7-6-7.5V4.5L9 2Z"/></svg>
+          <span>Safe Zones</span>
+          <kbd>Z</kbd>
+        </button>
+        <button id="btn-overlay-critical" type="button" class="lens-btn btn-overlay" aria-pressed="false" title="Tarjan Articulation Points &amp; Bridges (Shortcut: C)">
+          <svg class="dock-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7"><polygon points="9,2 16,9 9,16 2,9"/><circle cx="9" cy="9" r="1.8" fill="currentColor"/></svg>
+          <span>Critical</span>
+          <kbd>C</kbd>
+        </button>
+        <div class="dock-vsep"></div>
+        <button id="btn-game-hint" type="button" class="lens-btn btn-hint" title="Articulation-Aware Greedy Hint (Shortcut: H)">
+          <svg class="dock-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 14h4M7.5 16h3M9 2a5 5 0 0 1 3 9c-.6.5-1 1.2-1 2H7c0-.8-.4-1.5-1-2a5 5 0 0 1 3-9Z"/></svg>
+          <span>Hint</span>
+          <span id="hud-hints-left" class="hint-count-badge">3</span>
+          <kbd>H</kbd>
+        </button>
+      </div>
+
+      <!-- Capsule 3: Turn Execution -->
+      <div class="dock-capsule dock-turn glass-panel" role="group" aria-label="Turn Controls">
+        <button id="btn-game-undo" type="button" class="turn-undo-btn" disabled title="Undo last action in current turn (Shortcut: U)">
+          <svg class="dock-icon" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h7a4 4 0 0 1 0 8H8"/><polyline points="7,4 4,7 7,10"/></svg>
+          <span>Undo</span>
+          <kbd>U</kbd>
+        </button>
+        <button id="btn-game-endturn" type="button" class="turn-end-btn" title="End Warden Phase and advance frost (Shortcut: E)">
+          <span>End Turn</span>
+          <kbd>E</kbd>
+          <svg class="dock-icon" viewBox="0 0 18 18" fill="currentColor"><polygon points="4,3 11,9 4,15"/><rect x="12.5" y="3" width="2" height="12" rx="1"/></svg>
         </button>
       </div>
     </footer>
@@ -303,10 +354,10 @@
       </div>
 
       <div class="result-actions">
-        <button id="btn-result-retry" type="button" class="btn btn-secondary">↻ Retry Level</button>
-        <button id="btn-result-next" type="button" class="btn btn-primary">▶ Next Level</button>
-        <button id="btn-result-arena" type="button" class="btn btn-secondary">⚔ Open in Strategy Arena</button>
-        <button id="btn-result-menu" type="button" class="btn btn-ghost">☰ Level Select</button>
+        <button id="btn-result-retry" type="button" class="btn btn-secondary">↻ Retry</button>
+        <button id="btn-result-next" type="button" class="btn btn-primary">Next Realm →</button>
+        <button id="btn-result-arena" type="button" class="btn btn-secondary">Strategy Arena</button>
+        <button id="btn-result-menu" type="button" class="btn btn-ghost">Realms</button>
       </div>
     </div>
   </section>
@@ -316,10 +367,10 @@
     <div class="modal-container glass-panel wide-panel">
       <header class="panel-header">
         <div>
+          <div class="panel-eyebrow">WARDEN CODEX</div>
           <h2 id="howto-heading" class="panel-title">How to Play Frostveil</h2>
-          <p class="panel-subtitle">Master the algorithms of containment to protect the realm.</p>
         </div>
-        <button id="btn-howto-close" type="button" class="btn btn-primary">← Back</button>
+        <button id="btn-howto-close" type="button" class="btn btn-primary btn-sm">← Back</button>
       </header>
 
       <div class="howto-grid">
@@ -328,7 +379,7 @@
           <h3>1. The Realm &amp; The Citadel</h3>
           <p>
             Each node is a settlement with population <strong>1–9</strong>. One settlement is the
-            <strong>Citadel (♛)</strong>. If frost ever reaches the Citadel, the realm falls immediately!
+            <strong>Citadel (♛)</strong>. If frost ever reaches the Citadel, the realm falls immediately.
           </p>
         </article>
 
@@ -337,9 +388,8 @@
           <h3>2. Warden Phase Actions</h3>
           <p>
             Each turn you have <strong>k actions</strong> (1 or 2). Spend each action to either:
-            <br />• <strong>Light Beacon (🔥):</strong> Click a <code>CLEAR</code> settlement to make it <code>WARDED</code> (blocks frost forever).
-            <br />• <strong>Sever Road (✂️):</strong> Click a road edge to demolish it so frost cannot cross.
-            <br />Use <strong>Undo (U)</strong> to revert actions within the current turn.
+            <br />• <strong>Light Beacon:</strong> Click a <code>CLEAR</code> settlement to make it <code>WARDED</code> (blocks frost forever).
+            <br />• <strong>Sever Road:</strong> Click a road edge to demolish it so frost cannot cross.
           </p>
         </article>
 
@@ -347,25 +397,25 @@
           <canvas id="howto-canvas-frost" width="260" height="120" class="howto-canvas" aria-hidden="true"></canvas>
           <h3>3. Frost Spread &amp; Containment</h3>
           <p>
-            When you click <strong>End Turn (E)</strong>, every <code>FROSTED (❄️)</code> node spreads frost across remaining roads to all adjacent <code>CLEAR</code> nodes (<strong>one BFS layer</strong>).
-            The game ends when no frosted node has a clear neighbor.
+            When you click <strong>End Turn (E)</strong>, every <code>FROSTED</code> node spreads frost across remaining roads to all adjacent <code>CLEAR</code> nodes (<strong>one BFS layer</strong>).
+            Containment occurs when no frosted node has a clear neighbor.
           </p>
         </article>
 
         <article class="howto-card glass-subpanel">
           <canvas id="howto-canvas-overlays" width="260" height="120" class="howto-canvas" aria-hidden="true"></canvas>
-          <h3>4. Overlays, Hints &amp; Stars</h3>
+          <h3>4. Tactical Lenses &amp; Stars</h3>
           <p>
-            • <strong>Forecast (F):</strong> BFS arrival turns on each node (`✓` = unreachable).<br />
-            • <strong>Safe Zones (Z):</strong> DFS connected clear regions &amp; total population.<br />
-            • <strong>Critical (C):</strong> Tarjan articulation points &amp; bridge roads.<br />
-            • <strong>Stars:</strong> ★ Win · ★★ Match Articulation-Aware Greedy · ★★★ ≥95% of Best Known / Optimal.
+            • <strong>Forecast (F):</strong> BFS arrival turns (`✓` = unreachable).<br />
+            • <strong>Safe Zones (Z):</strong> DFS connected clear regions &amp; population.<br />
+            • <strong>Critical (C):</strong> Tarjan articulation points &amp; bridges.<br />
+            • <strong>Stars:</strong> ★ Win · ★★ Match Greedy · ★★★ ≥95% Optimal.
           </p>
         </article>
       </div>
 
       <div class="shortcuts-bar glass-subpanel">
-        <strong>Keyboard Shortcuts:</strong>
+        <strong>Shortcuts:</strong>
         <span><kbd>1</kbd> Beacon</span>
         <span><kbd>2</kbd> Sever</span>
         <span><kbd>E</kbd> End Turn</span>
@@ -374,6 +424,8 @@
         <span><kbd>F</kbd> Forecast</span>
         <span><kbd>Z</kbd> Safe Zones</span>
         <span><kbd>C</kbd> Critical</span>
+        <span><kbd>V</kbd> 2D/3D</span>
+        <span><kbd>0</kbd> Reset View</span>
         <span><kbd>R</kbd> Restart</span>
         <span><kbd>Esc</kbd> Menu</span>
       </div>
@@ -385,7 +437,7 @@
     <!-- Top Arena Control Panel -->
     <header class="arena-topbar glass-panel">
       <div class="arena-title-block">
-        <h2 id="arena-heading" class="arena-title">⚔ Strategy Arena</h2>
+        <h2 id="arena-heading" class="arena-title">Strategy Arena</h2>
         <select id="arena-level-select" class="arena-select" aria-label="Select level for Strategy Arena">
           <!-- Populated dynamically -->
         </select>
@@ -396,28 +448,31 @@
 
       <div class="arena-playback-controls">
         <button id="btn-arena-play" type="button" class="btn btn-primary btn-sm">▶ Play</button>
-        <button id="btn-arena-step" type="button" class="btn btn-secondary btn-sm">⏭ Step Turn</button>
-        <button id="btn-arena-reset" type="button" class="btn btn-ghost btn-sm">↺ Reset</button>
+        <button id="btn-arena-step" type="button" class="btn btn-secondary btn-sm">Step</button>
+        <button id="btn-arena-reset" type="button" class="btn btn-ghost btn-sm">Reset</button>
         <label class="speed-control" for="arena-speed">
-          <span>Speed:</span>
+          <span>Speed</span>
           <input type="range" id="arena-speed" min="150" max="1500" step="150" value="600" />
           <span id="arena-speed-label">1.0x</span>
         </label>
       </div>
 
       <div class="arena-right-controls">
+        <button id="btn-arena-view-3d" type="button" class="util-chip" aria-pressed="true" title="Toggle 3D view (V)">
+          3D View
+        </button>
         <button id="btn-arena-play-self" type="button" class="btn btn-secondary btn-sm">
-          🎮 Play Level Yourself
+          Play Yourself
         </button>
         <button id="btn-arena-back" type="button" class="btn btn-ghost btn-sm">← Back</button>
       </div>
     </header>
 
-    <!-- Bottom Collapsible Arena Comparison Table -->
+    <!-- Bottom Arena Comparison Table -->
     <footer class="arena-bottombar glass-panel">
       <div class="arena-status-line">
         <span id="arena-live-status">Turn 1 · Ready to simulate strategy</span>
-        <span id="arena-action-log" class="arena-action-log">Select Play or Step Turn to watch the algorithm act.</span>
+        <span id="arena-action-log" class="arena-action-log">Select Play or Step to watch the algorithm act.</span>
       </div>
       <div class="table-scroll arena-table-wrap">
         <table class="comparison-table compact-table" aria-label="Strategy Arena Benchmark Results">

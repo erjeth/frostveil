@@ -23,6 +23,7 @@ import {
 } from './core.js';
 
 import { computeLayout } from './layout.js';
+import { Camera } from './camera.js';
 import { EffectsManager } from './effects.js';
 import { Renderer } from './renderer.js';
 import { InputController } from './input.js';
@@ -44,7 +45,9 @@ class FrostveilApp {
     this.currentLevel = buildLevel(1);
     this.currentLevelLabel = 'Level 1: Outpost of Dawn';
     this.state = createGameState(this.currentLevel);
-    this.layout = computeLayout(this.currentLevel, this.renderer.width, this.renderer.height);
+    this.camera = new Camera();
+    this.baseLayout = computeLayout(this.currentLevel, this.renderer.width, this.renderer.height);
+    this.layout = this.camera.projectLayout(this.baseLayout);
 
     // UI state for Game Screen
     this.activeTool = 'auto'; // 'auto' | 'beacon' | 'sever'
@@ -118,7 +121,9 @@ class FrostveilApp {
           clientY
         });
       },
-      onShortcut: (action) => this.handleShortcut(action)
+      onShortcut: (action) => this.handleShortcut(action),
+      onOrbit: (dx, dy) => this.camera.orbit(dx, dy),
+      onZoom: (factor) => this.camera.zoomBy(factor)
     });
 
     // Frame timing & FPS measurement
@@ -133,7 +138,7 @@ class FrostveilApp {
     window.addEventListener('resize', () => {
       this.renderer.resize();
       if (this.state && this.state.level) {
-        this.layout = computeLayout(this.state.level, this.renderer.width, this.renderer.height);
+        this.baseLayout = computeLayout(this.state.level, this.renderer.width, this.renderer.height);
       }
       if (this.screens.activeScreen === 'howto') {
         this.renderer.drawHowToIllustrations();
@@ -158,6 +163,9 @@ class FrostveilApp {
     this._bindClick('btn-overlay-critical', () => this.toggleOverlay('critical'));
 
     this._bindClick('btn-game-hint', () => this.triggerHint());
+    this._bindClick('btn-view-3d', () => this.handleShortcut('toggle3d'));
+    this._bindClick('btn-view-reset', () => this.handleShortcut('resetView'));
+    this._bindClick('btn-arena-view-3d', () => this.handleShortcut('toggle3d'));
     this._bindClick('btn-game-undo', () => this.triggerUndo());
     this._bindClick('btn-game-endturn', () => this.triggerEndTurn());
     this._bindClick('btn-game-restart', () => this.restartCurrentLevel());
@@ -180,8 +188,12 @@ class FrostveilApp {
     const label = document.getElementById('mute-label');
     const btn = document.getElementById('btn-mute');
     const muted = this.audio.muted;
-    if (icon) icon.textContent = muted ? '🔇' : '🔊';
-    if (label) label.textContent = muted ? 'Muted' : 'Sound On';
+    if (icon) {
+      icon.innerHTML = muted
+        ? '<svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="3,7 7,7 11,3 11,15 7,11 3,11"/><line x1="14" y1="6" x2="17" y2="12"/><line x1="17" y1="6" x2="14" y2="12"/></svg>'
+        : '<svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="3,7 7,7 11,3 11,15 7,11 3,11"/><path d="M13.5 6.5a3.5 3.5 0 0 1 0 5"/><path d="M15.5 4.5a6.5 6.5 0 0 1 0 9"/></svg>';
+    }
+    if (label) label.textContent = muted ? 'Muted' : 'Sound';
     if (btn) btn.setAttribute('aria-pressed', String(muted));
   }
 
@@ -197,7 +209,8 @@ class FrostveilApp {
     this.currentLevel = level;
     this.currentLevelLabel = label;
     this.state = createGameState(level);
-    this.layout = computeLayout(level, this.renderer.width, this.renderer.height);
+    this.baseLayout = computeLayout(level, this.renderer.width, this.renderer.height);
+    this.camera.reset();
     this.effects.clearTransient();
 
     this.hintsLeft = 3;
@@ -422,6 +435,20 @@ class FrostveilApp {
    */
   handleShortcut(action) {
     switch (action) {
+      case 'toggle3d': {
+        this.audio.playClick();
+        const on = this.camera.toggle3D();
+        for (const id of ['btn-view-3d', 'btn-arena-view-3d']) {
+          const b = document.getElementById(id);
+          if (b) b.setAttribute('aria-pressed', String(on));
+        }
+        this.hud.showToast(on ? '🧊 3D view: drag to orbit, scroll to zoom' : '🗺 Flat 2D top-down view', 'info');
+        break;
+      }
+      case 'resetView':
+        this.audio.playClick();
+        this.camera.reset();
+        break;
       case 'mute':
         this.audio.toggleMute();
         this._updateMuteButtonUI();
@@ -538,7 +565,7 @@ class FrostveilApp {
     if (!this.arenaLevel) return;
 
     this.state = createGameState(this.arenaLevel);
-    this.layout = computeLayout(this.arenaLevel, this.renderer.width, this.renderer.height);
+    this.baseLayout = computeLayout(this.arenaLevel, this.renderer.width, this.renderer.height);
     this.effects.clearTransient();
     this.hintNodes = [];
     this.arenaTurnIdx = 0;
@@ -758,6 +785,13 @@ class FrostveilApp {
     }
 
     this.effects.update(dt);
+
+    // Orbit camera: slowly auto-rotate behind menu screens, then project the map
+    const scr = this.screens.activeScreen;
+    this.camera.autoRotate = scr === 'title' || scr === 'levels' || scr === 'howto';
+    this.camera.update(dt, this.effects.reducedMotion);
+    this.layout = this.camera.projectLayout(this.baseLayout);
+    this.effects.cameraYaw = this.camera.yaw;
 
     const activeOverlays =
       this.screens.activeScreen === 'arena'

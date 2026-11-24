@@ -11,6 +11,7 @@ index.html
 css/style.css
 src/ui/
 ├── main.js          # Application bootstrap, 60fps render loop, game controller, Arena playback
+├── camera.js        # 2.5D / 3D orbit, tilt, perspective projection, and zoom camera controller
 ├── screens.js       # Screen router (Title, Level Select, Free Play, Result, How to Play, Strategy Arena)
 ├── renderer.js      # Procedural HTML5 Canvas 2D drawing for settlements, Citadel, roads, and overlays
 ├── layout.js        # Responsive [0,1] coordinate scaling, HUD safe margins, node/edge hit-testing
@@ -24,6 +25,7 @@ src/ui/
 docs/
 ├── UI_NOTES.md      # This document
 └── img/
+    ├── game-3d.png
     └── strategy-arena.png
 ```
 

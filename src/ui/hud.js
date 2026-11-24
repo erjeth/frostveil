@@ -70,19 +70,19 @@ export class HudManager {
 
     if (this.elCitadel) {
       if (outcome.citadelSafe) {
-        this.elCitadel.textContent = '♛ Safe';
+        this.elCitadel.textContent = 'Safe';
         this.elCitadel.className = 'stat-value status-safe';
       } else {
-        this.elCitadel.textContent = '❄ FROSTED!';
+        this.elCitadel.textContent = 'FROSTED';
         this.elCitadel.className = 'stat-value status-danger';
       }
     }
 
     if (this.elPopText) {
-      this.elPopText.textContent = `Saved: ${outcome.savedPopulation} / ${outcome.totalPopulation} (${outcome.savedPercent}%)`;
+      this.elPopText.textContent = `Saved ${outcome.savedPopulation}/${outcome.totalPopulation} (${outcome.savedPercent}%)`;
     }
     if (this.elTargetText) {
-      this.elTargetText.textContent = `Target: ${level.targetPercent}%`;
+      this.elTargetText.textContent = `Goal ${level.targetPercent}%`;
     }
     if (this.elProgressFill) {
       const pct = Math.max(0, Math.min(100, outcome.savedPercent));
