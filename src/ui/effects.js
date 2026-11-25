@@ -2,16 +2,15 @@
  * @file effects.js
  * Procedural visual effects manager for Frostveil (Member B).
  *
- * Handles:
- * - Aurora borealis bands (teal, cyan, violet wave ribbons)
- * - Slow falling snow particles (pre-allocated fixed pool for zero per-frame GC)
- * - Frost creep animation along edges when frost advances (250-450 ms)
- * - Severed road dashed ghost line fade-out (320 ms)
- * - Beacon ignition radial ring & embers (400 ms)
- * - Respects `prefers-reduced-motion: reduce`
+ * Implements the bright Alpine Arctic sky backdrop:
+ * - Luminous arctic daylight/twilight sky gradient
+ * - Soft volumetric cloud sea floating beneath the iceberg island
+ * - Subtle distant snow peaks & twinkling ice dust
+ * - Falling snow particles
+ * - Glowing cyan frost creep beams, severed-road ghosts, and beacon pulses
  */
 
-const SNOW_COUNT = 68;
+const SNOW_COUNT = 72;
 
 export class EffectsManager {
   constructor() {
@@ -21,33 +20,31 @@ export class EffectsManager {
     this.width = 1280;
     this.height = 720;
     this.time = 0;
+    this.cameraYaw = 0;
 
     // Pre-allocated snow pool
     this.snow = Array.from({ length: SNOW_COUNT }, (_, i) => ({
       x: ((i * 173) % 1000) / 1000,
       y: ((i * 317) % 1000) / 1000,
-      r: 1.1 + (i % 4) * 0.65,
+      r: 1.3 + (i % 4) * 0.75,
       speedY: 14 + (i % 5) * 6,
       driftPhase: (i * 1.3) % (Math.PI * 2),
-      alpha: 0.22 + (i % 5) * 0.11
+      alpha: 0.35 + (i % 5) * 0.12
     }));
 
-    /**
-     * Severed road ghost lines:
-     * { u: number, v: number, startTime: number, duration: number }
-     */
+    // Pre-allocated fluffy cloud clusters for the lower cloud sea
+    this._clouds = [
+      { x: 0.10, y: 0.78, rx: 170, ry: 54, speed: 0.004, alpha: 0.82 },
+      { x: 0.26, y: 0.85, rx: 220, ry: 68, speed: 0.003, alpha: 0.88 },
+      { x: 0.48, y: 0.88, rx: 260, ry: 74, speed: 0.0025, alpha: 0.90 },
+      { x: 0.72, y: 0.84, rx: 215, ry: 64, speed: 0.0035, alpha: 0.86 },
+      { x: 0.90, y: 0.77, rx: 180, ry: 56, speed: 0.0045, alpha: 0.80 },
+      { x: 0.16, y: 0.66, rx: 135, ry: 40, speed: 0.002, alpha: 0.45 },
+      { x: 0.84, y: 0.65, rx: 145, ry: 42, speed: 0.0022, alpha: 0.45 }
+    ];
+
     this.severedGhosts = [];
-
-    /**
-     * Frost creep animations along edges:
-     * { fromId: number, toId: number, startTime: number, duration: number }
-     */
     this.frostCreeps = [];
-
-    /**
-     * Beacon ignition pulses:
-     * { nodeId: number, startTime: number, duration: number }
-     */
     this.beaconPulses = [];
   }
 
@@ -74,9 +71,6 @@ export class EffectsManager {
     this.beaconPulses.length = 0;
   }
 
-  /**
-   * Triggers a severed-road ghost animation between nodes u and v.
-   */
   spawnSeveredRoad(u, v) {
     if (this.reducedMotion) return;
     this.severedGhosts.push({
@@ -87,27 +81,15 @@ export class EffectsManager {
     });
   }
 
-  /**
-   * Triggers a warm beacon ignition ring around nodeId.
-   */
   spawnBeaconPulse(nodeId) {
     if (this.reducedMotion) return;
     this.beaconPulses.push({
       nodeId,
       startTime: this.time,
-      duration: 0.42
+      duration: 0.45
     });
   }
 
-  /**
-   * Triggers frost creep animations along edges leading into `newlyFrosted` nodes
-   * from previously frosted neighbor nodes.
-   *
-   * @param {number[]} newlyFrosted
-   * @param {object} graph
-   * @param {Uint8Array} prevNodeState
-   * @param {number} frostedConst
-   */
   spawnFrostSpread(newlyFrosted, graph, prevNodeState, frostedConst) {
     if (this.reducedMotion || !newlyFrosted || newlyFrosted.length === 0) return;
     for (let i = 0; i < newlyFrosted.length; i++) {
@@ -120,17 +102,13 @@ export class EffectsManager {
             fromId: src,
             toId: target,
             startTime: this.time,
-            duration: 0.36
+            duration: 0.38
           });
         }
       }
     }
   }
 
-  /**
-   * Advances snow particles and prunes finished animations.
-   * @param {number} dt Delta time in seconds
-   */
   update(dt) {
     const clampedDt = Math.min(0.1, Math.max(0, dt));
     this.time += clampedDt;
@@ -151,7 +129,6 @@ export class EffectsManager {
       }
     }
 
-    // Prune completed transient effects in place
     this._pruneList(this.severedGhosts);
     this._pruneList(this.frostCreeps);
     this._pruneList(this.beaconPulses);
@@ -168,86 +145,91 @@ export class EffectsManager {
     list.length = writeIdx;
   }
 
-  /**
-   * Draws the arctic night aurora ribbons and snow backdrop.
-   * @param {CanvasRenderingContext2D} ctx
-   * @param {number} width
-   * @param {number} height
-   */
   drawBackgroundEffects(ctx, width, height) {
     this.drawSky(ctx, width, height);
     this.drawSnow(ctx, width, height);
   }
 
   /**
-   * Draws twinkling stars, aurora ribbons, and two parallax mountain ridges that
-   * slide sideways as the camera orbits (sells the 3D depth).
+   * Draws the luminous Alpine Arctic sky, sparkling ice motes, soft aurora glow,
+   * and the sea of fluffy clouds below the floating island (matching Reference Image 1).
    */
   drawSky(ctx, width, height) {
     const t = this.reducedMotion ? 0 : this.time;
     const yaw = this.cameraYaw || 0;
 
-    if (!this._stars) {
-      this._stars = Array.from({ length: 110 }, (_, i) => ({
-        x: ((i * 7919) % 1000) / 1000,
-        y: ((i * 4447) % 1000) / 1000,
-        r: 0.5 + (i % 3) * 0.45,
-        phase: i * 0.77
-      }));
+    // 1. Central radial atmospheric glow behind the floating island
+    ctx.save();
+    const sunGlow = ctx.createRadialGradient(
+      width * 0.5,
+      height * 0.44,
+      20,
+      width * 0.5,
+      height * 0.44,
+      Math.max(width, height) * 0.62
+    );
+    sunGlow.addColorStop(0, 'rgba(235, 250, 255, 0.52)');
+    sunGlow.addColorStop(0.5, 'rgba(145, 218, 255, 0.22)');
+    sunGlow.addColorStop(1, 'rgba(56, 142, 214, 0)');
+    ctx.fillStyle = sunGlow;
+    ctx.fillRect(0, 0, width, height);
+
+    // 2. Soft upper-sky aurora sheen
+    const bands = [
+      { yBase: height * 0.14, amp: 16, freq: 0.0032, speed: 0.45, color: 'rgba(186, 242, 255, 0.18)', thickness: 48 },
+      { yBase: height * 0.22, amp: 20, freq: 0.0024, speed: -0.35, color: 'rgba(125, 228, 255, 0.14)', thickness: 58 }
+    ];
+    for (let b = 0; b < bands.length; b++) {
+      const band = bands[b];
+      ctx.beginPath();
+      const step = Math.max(48, Math.floor(width / 16));
+      for (let x = 0; x <= width + step; x += step) {
+        const y =
+          band.yBase +
+          Math.sin(x * band.freq + t * band.speed) * band.amp +
+          Math.cos(x * band.freq * 0.6 - t * band.speed * 0.8) * (band.amp * 0.45);
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = band.color;
+      ctx.lineWidth = band.thickness;
+      ctx.lineCap = 'round';
+      ctx.stroke();
     }
 
-    ctx.save();
-    // Stars (slow parallax with yaw)
-    ctx.fillStyle = '#e8f6ff';
-    const starShift = yaw * width * 0.03;
-    for (let i = 0; i < this._stars.length; i++) {
-      const s = this._stars[i];
-      let sx = (s.x * width + starShift) % width;
-      if (sx < 0) sx += width;
-      ctx.globalAlpha = 0.35 + 0.35 * Math.sin(t * 1.6 + s.phase);
+    // 3. Soft volumetric cloud sea around the lower horizon
+    const parallax = yaw * width * 0.05;
+    for (let i = 0; i < this._clouds.length; i++) {
+      const c = this._clouds[i];
+      let cx = ((c.x * width + t * c.speed * width + parallax) % (width + 320)) - 160;
+      if (cx < -160) cx += width + 320;
+      const cy = c.y * height;
+
+      const grad = ctx.createRadialGradient(cx, cy - c.ry * 0.2, c.ry * 0.15, cx, cy, c.rx);
+      grad.addColorStop(0, `rgba(248, 253, 255, ${c.alpha})`);
+      grad.addColorStop(0.55, `rgba(214, 240, 255, ${c.alpha * 0.65})`);
+      grad.addColorStop(1, 'rgba(165, 218, 250, 0)');
+
+      ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(sx, s.y * height * 0.55, s.r, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy, c.rx, c.ry, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.globalAlpha = 1;
-    ctx.restore();
 
-    this._drawAurora(ctx, width, height, t);
+    // Bottom cloud mist veil
+    const mist = ctx.createLinearGradient(0, height * 0.72, 0, height);
+    mist.addColorStop(0, 'rgba(210, 238, 255, 0)');
+    mist.addColorStop(0.65, 'rgba(225, 245, 255, 0.55)');
+    mist.addColorStop(1, 'rgba(240, 250, 255, 0.85)');
+    ctx.fillStyle = mist;
+    ctx.fillRect(0, height * 0.72, width, height * 0.28);
 
-    // Parallax mountain ridges
-    this._drawRidge(ctx, width, height, height * 0.4, 70, yaw * width * 0.08, 'rgba(32, 56, 102, 0.55)', 1.3);
-    this._drawRidge(ctx, width, height, height * 0.47, 55, yaw * width * 0.16, 'rgba(15, 30, 62, 0.85)', 2.1);
-  }
-
-  _drawRidge(ctx, width, height, baseY, amp, offset, color, seed) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(0, height);
-    const step = Math.max(14, width / 90);
-    for (let x = 0; x <= width + step; x += step) {
-      const u = (x + offset) / width;
-      const y =
-        baseY -
-        amp *
-          (0.55 +
-            0.25 * Math.sin(u * 6.3 * 1.0 + seed) +
-            0.15 * Math.sin(u * 6.3 * 2.7 + seed * 2) +
-            0.08 * Math.abs(Math.sin(u * 6.3 * 7.1 + seed * 3)));
-      ctx.lineTo(x, y);
-    }
-    ctx.lineTo(width, height);
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(170, 225, 255, 0.12)';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
     ctx.restore();
   }
 
   drawSnow(ctx, width, height) {
     ctx.save();
-    ctx.fillStyle = '#d9f4ff';
+    ctx.fillStyle = '#ffffff';
     for (let i = 0; i < this.snow.length; i++) {
       const p = this.snow[i];
       ctx.globalAlpha = p.alpha;
@@ -258,43 +240,6 @@ export class EffectsManager {
     ctx.restore();
   }
 
-  _drawAurora(ctx, width, height, t) {
-    // 1. Aurora borealis ribbons across the upper sky
-    const bands = [
-      { yBase: height * 0.20, amp: 24, freq: 0.0032, speed: 0.55, color: 'rgba(45, 212, 191, 0.09)', thickness: 64 },
-      { yBase: height * 0.28, amp: 30, freq: 0.0026, speed: -0.42, color: 'rgba(77, 228, 255, 0.08)', thickness: 76 },
-      { yBase: height * 0.15, amp: 18, freq: 0.0040, speed: 0.35, color: 'rgba(139, 92, 246, 0.07)', thickness: 56 }
-    ];
-
-    ctx.save();
-    for (let b = 0; b < bands.length; b++) {
-      const band = bands[b];
-      ctx.beginPath();
-      const step = Math.max(48, Math.floor(width / 16));
-      for (let x = 0; x <= width + step; x += step) {
-        const y =
-          band.yBase +
-          Math.sin(x * band.freq + t * band.speed) * band.amp +
-          Math.cos(x * band.freq * 0.6 - t * band.speed * 0.8) * (band.amp * 0.45);
-        if (x === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-      }
-      ctx.strokeStyle = band.color;
-      ctx.lineWidth = band.thickness;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  /**
-   * Draws severed road ghost animations and advancing frost creep animations.
-   * @param {CanvasRenderingContext2D} ctx
-   * @param {{ nodes: { x: number, y: number, r: number }[] }} layout
-   */
   drawEdgeEffects(ctx, layout) {
     if (!layout || !layout.nodes || layout.nodes.length === 0) return;
 
@@ -309,8 +254,8 @@ export class EffectsManager {
       const alpha = 1 - prog;
 
       ctx.save();
-      ctx.strokeStyle = `rgba(255, 110, 128, ${alpha.toFixed(3)})`;
-      ctx.lineWidth = 2.5 * (1 - prog * 0.4);
+      ctx.strokeStyle = `rgba(239, 68, 68, ${alpha.toFixed(3)})`;
+      ctx.lineWidth = 3 * (1 - prog * 0.4);
       ctx.setLineDash([7, 7]);
       ctx.lineDashOffset = prog * 18;
       ctx.beginPath();
@@ -318,10 +263,9 @@ export class EffectsManager {
       ctx.lineTo(nv.x, nv.y);
       ctx.stroke();
 
-      // Small scissor spark at midpoint
       const mx = (nu.x + nv.x) * 0.5;
       const my = (nu.y + nv.y) * 0.5;
-      ctx.fillStyle = `rgba(255, 185, 120, ${alpha.toFixed(3)})`;
+      ctx.fillStyle = `rgba(251, 146, 60, ${alpha.toFixed(3)})`;
       ctx.beginPath();
       ctx.arc(mx, my, 4 + prog * 8, 0, Math.PI * 2);
       ctx.fill();
@@ -340,29 +284,23 @@ export class EffectsManager {
       const curY = nFrom.y + (nTo.y - nFrom.y) * prog;
 
       ctx.save();
-      ctx.strokeStyle = 'rgba(130, 240, 255, 0.92)';
-      ctx.lineWidth = 4;
-      ctx.shadowColor = '#4de4ff';
-      ctx.shadowBlur = 10;
+      ctx.strokeStyle = 'rgba(56, 235, 255, 0.96)';
+      ctx.lineWidth = 5;
+      ctx.shadowColor = '#06b6d4';
+      ctx.shadowBlur = 14;
       ctx.beginPath();
       ctx.moveTo(nFrom.x, nFrom.y);
       ctx.lineTo(curX, curY);
       ctx.stroke();
 
-      // Leading ice crystal spark
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(curX, curY, 4.5, 0, Math.PI * 2);
+      ctx.arc(curX, curY, 5, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
   }
 
-  /**
-   * Draws expanding warm amber rings when a beacon is lit.
-   * @param {CanvasRenderingContext2D} ctx
-   * @param {{ nodes: { x: number, y: number, r: number }[] }} layout
-   */
   drawNodeEffects(ctx, layout) {
     if (!layout || !layout.nodes || layout.nodes.length === 0) return;
 
@@ -372,12 +310,12 @@ export class EffectsManager {
       if (!node) continue;
 
       const prog = Math.min(1, (this.time - bp.startTime) / bp.duration);
-      const radius = node.r + prog * 28;
-      const alpha = (1 - prog) * 0.85;
+      const radius = node.r + prog * 30;
+      const alpha = (1 - prog) * 0.9;
 
       ctx.save();
-      ctx.strokeStyle = `rgba(255, 196, 82, ${alpha.toFixed(3)})`;
-      ctx.lineWidth = 3 * (1 - prog * 0.5);
+      ctx.strokeStyle = `rgba(245, 158, 11, ${alpha.toFixed(3)})`;
+      ctx.lineWidth = 3.5 * (1 - prog * 0.5);
       ctx.beginPath();
       ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
       ctx.stroke();

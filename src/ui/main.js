@@ -217,6 +217,7 @@ class FrostveilApp {
     this.hintNodes = [];
     this._recomputeAnalysis();
 
+    this.screens._activeLevelId = level.id || 0;
     this.screens.showScreen('game');
     this._syncHud();
 

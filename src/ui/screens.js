@@ -48,9 +48,11 @@ export class ScreenManager {
     };
 
     this._customFreePlayLevel = null;
+    this._activeLevelId = 1;
     this._bindDomEvents();
     this._attachTilt(document.querySelector('.title-card'), 7);
     this._attachTilt(document.querySelector('.freeplay-card'), 5);
+    this.renderExpeditionSidebar(1);
   }
 
   /**
@@ -103,6 +105,8 @@ export class ScreenManager {
 
     if (name === 'levels') {
       this.renderLevelSelect();
+    } else if (name === 'game') {
+      this.renderExpeditionSidebar(this._activeLevelId);
     } else if (name === 'howto') {
       this.renderer.drawHowToIllustrations();
     }
@@ -305,6 +309,7 @@ export class ScreenManager {
       if (unlocked) {
         card.addEventListener('click', () => {
           this.audio.playClick();
+          this._activeLevelId = spec.id;
           const level = buildLevel(spec.id);
           this.cb.onStartLevel(level, `Level ${spec.id}: ${spec.name}`);
         });
@@ -312,8 +317,59 @@ export class ScreenManager {
 
       grid.appendChild(card);
       if (unlocked) {
-        this._attachTilt(card, 14);
+        this._attachTilt(card, 10);
       }
+    }
+    this.renderExpeditionSidebar(this._activeLevelId);
+  }
+
+  /**
+   * Renders the left-side Expedition Command sidebar with snow-capped wooden Realm cards
+   * on the Game screen (matching Reference Image 1).
+   * @param {number} [activeId]
+   */
+  renderExpeditionSidebar(activeId = this._activeLevelId) {
+    this._activeLevelId = activeId;
+    const list = document.getElementById('sidebar-realm-list');
+    if (!list) return;
+
+    list.innerHTML = '';
+    for (let i = 0; i < LEVEL_SPECS.length; i++) {
+      const spec = LEVEL_SPECS[i];
+      const unlocked = this.storage.isLevelUnlocked(spec.id);
+      const rec = this.storage.getLevelRecord(spec.id);
+      const isCurrent = spec.id === activeId;
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `wood-realm-card${isCurrent ? ' active-realm' : ''}${unlocked ? '' : ' locked'}`;
+      btn.setAttribute('role', 'listitem');
+      btn.disabled = !unlocked;
+
+      const starsHtml = unlocked
+        ? this._formatStarsHtml(rec.stars > 0 ? rec.stars : 3)
+        : '<span class="star-empty">🔒</span>';
+
+      btn.innerHTML = `
+        <div class="wood-snow-cap" aria-hidden="true"></div>
+        <div class="wood-card-top">
+          <span class="wood-realm-num">REALM ${spec.id}</span>
+          <span class="wood-realm-stars">${starsHtml}</span>
+        </div>
+        <div class="wood-realm-name">${spec.name}</div>
+        <div class="wood-realm-sub">n=${spec.n} · k=${spec.k} · Goal ${spec.targetPercent}%</div>
+      `;
+
+      if (unlocked) {
+        btn.addEventListener('click', () => {
+          this.audio.playClick();
+          this._activeLevelId = spec.id;
+          const level = buildLevel(spec.id);
+          this.cb.onStartLevel(level, `Level ${spec.id}: ${spec.name}`);
+        });
+      }
+
+      list.appendChild(btn);
     }
   }
 
