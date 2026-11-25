@@ -226,9 +226,9 @@ export class Renderer {
         ctx.stroke();
       }
 
-      // Zone summary label at centroid / top of zone
+      // Zone summary label at centroid / top of zone (clamped below the FROSTVEIL hero banner)
       const cx = sumX / zone.nodes.length;
-      const cy = Math.max(85, minY - 28);
+      const cy = Math.max(162, minY - 24);
       const label = zone.threatened
         ? `Zone Pop: ${zone.population}`
         : `✓ SECURED · Pop: ${zone.population}`;
@@ -1032,8 +1032,56 @@ export class Renderer {
   }
 
   /**
+   * Helper to draw one satellite islet and its optional top prop ('shelter' or 'crystal').
+   */
+  _renderOneIsletWithProp(ctx, cam, isl, dockScale) {
+    this._drawSatelliteIslet(ctx, cam, isl.wx, isl.wy, isl.rx, isl.ry, isl.zOff, isl.depth);
+    if (isl.prop === 'shelter') {
+      this._pyramid(
+        ctx,
+        cam,
+        isl.wx + isl.rx * 0.1,
+        isl.wy,
+        this._box(dockScale * 0.62),
+        isl.zOff,
+        isl.zOff + dockScale * 0.95,
+        [148, 92, 44],
+        'rgba(55, 30, 12, 0.55)'
+      );
+    } else if (isl.prop === 'crystal') {
+      const cR = dockScale * 0.56;
+      this._crystal(
+        ctx,
+        cam,
+        isl.wx,
+        isl.wy,
+        this._ngon(cR, 6, 0.2),
+        isl.zOff + cR * 0.8,
+        isl.zOff + cR * 2.5,
+        isl.zOff,
+        [72, 212, 255],
+        'rgba(224, 248, 255, 0.9)',
+        0.95
+      );
+      this._crystal(
+        ctx,
+        cam,
+        isl.wx - cR * 0.85,
+        isl.wy + cR * 0.3,
+        this._ngon(cR * 0.72, 6, 0.6),
+        isl.zOff + cR * 0.5,
+        isl.zOff + cR * 1.8,
+        isl.zOff,
+        [56, 189, 248],
+        'rgba(224, 248, 255, 0.85)',
+        0.92
+      );
+    }
+  }
+
+  /**
    * Draws the map as a low-poly floating snowy iceberg island with jagged blue glacier
-   * cliffs below, turquoise frozen ponds, and floating satellite ice rocks (Reference Image 1).
+   * cliffs below, turquoise frozen ponds, and depth-sorted floating satellite ice rocks.
    */
   _drawGround(ctx, layout) {
     const cam = layout.camera;
@@ -1043,14 +1091,30 @@ export class Renderer {
     const hh = b.height / 2 + pad;
     const ring = this._buildIslandRing(hw, hh);
     const n = ring.length;
+    const dockScale = Math.max(layout.baseRadius, 17.5);
+
+    const islets = [
+      { wx: -hw * 0.24, wy: hh * 0.94, rx: hw * 0.16, ry: hh * 0.11, zOff: -38, depth: 105, prop: 'shelter' },
+      { wx: hw * 0.26, wy: hh * 0.96, rx: hw * 0.13, ry: hh * 0.09, zOff: -46, depth: 95, prop: 'crystal' },
+      { wx: -hw * 0.82, wy: hh * 0.72, rx: hw * 0.09, ry: hh * 0.07, zOff: -52, depth: 75, prop: null }
+    ];
 
     ctx.save();
 
+    // 0. Draw any satellite islets that are rotated behind the main island FIRST so the main island occludes them!
+    for (let s = 0; s < islets.length; s++) {
+      const isl = islets[s];
+      const camRy = isl.wx * cam._sinY + isl.wy * cam._cosY;
+      if (camRy < 0) {
+        this._renderOneIsletWithProp(ctx, cam, isl, dockScale);
+      }
+    }
+
     // 1. Low-poly faceted glacier underbelly (2 tiers of jagged crystalline facets)
-    // Note: in _prism winding, bottom points (lower h) come first so front-facing facets have positive screen area!
     const rimBot = new Array(n);
     const midRing = new Array(n);
     const deepTips = new Array(n);
+    const frontEdgeMask = new Uint8Array(n);
 
     for (let i = 0; i < n; i++) {
       const [rx, ry] = ring[i];
@@ -1077,7 +1141,6 @@ export class Renderer {
       const j = (i + 1) % n;
       const bVal = this._light(cam, ring[i], ring[j]);
 
-      // Spike triangle pointing down to deepTips[i]
       const low1 = [deepTips[i], midRing[j], midRing[i]];
       if (this._area(low1) > 0.5) {
         this._poly(ctx, low1);
@@ -1087,7 +1150,6 @@ export class Renderer {
         ctx.stroke();
       }
 
-      // Adjacent recessed facet
       const low2 = [deepTips[i], deepTips[j], midRing[j]];
       if (this._area(low2) > 0.5) {
         this._poly(ctx, low2);
@@ -1105,6 +1167,7 @@ export class Renderer {
 
       const up1 = [midRing[i], midRing[j], rimBot[i]];
       if (this._area(up1) > 0.5) {
+        frontEdgeMask[i] = 1;
         this._poly(ctx, up1);
         ctx.fillStyle = this._shade(i % 2 === 0 ? glacierBrightRgb : glacierUpperRgb, bVal * 1.08);
         ctx.fill();
@@ -1114,6 +1177,7 @@ export class Renderer {
 
       const up2 = [midRing[j], rimBot[j], rimBot[i]];
       if (this._area(up2) > 0.5) {
+        frontEdgeMask[i] = 1;
         this._poly(ctx, up2);
         ctx.fillStyle = this._shade(glacierUpperRgb, bVal * 0.92);
         ctx.fill();
@@ -1147,23 +1211,33 @@ export class Renderer {
     ctx.lineWidth = 2.2;
     ctx.stroke();
 
-    // 2b. Hanging 3D white-and-cyan icicles dripping from the front snow overhang
-    for (let i = 7; i <= 14; i++) {
+    // 2b. Hanging 3D white-and-cyan icicles ONLY along front-facing snow overhang edges!
+    for (let i = 0; i < n; i++) {
+      if (!frontEdgeMask[i]) continue;
       const j = (i + 1) % n;
+      const ex = ring[j][0] - ring[i][0];
+      const ey = ring[j][1] - ring[i][1];
+      const elen = Math.hypot(ex, ey) || 1;
+      const tx = (ex / elen) * 5;
+      const ty = (ey / elen) * 5;
+
       for (let k = 1; k <= 2; k++) {
         const frac = k / 3;
         const ix = ring[i][0] * (1 - frac) + ring[j][0] * frac;
         const iy = ring[i][1] * (1 - frac) + ring[j][1] * frac;
-        const icicleLen = 22 + ((i * 7 + k * 11) % 3) * 12;
-        const bL = this._p(cam, ix - 5, iy, -10);
-        const bR = this._p(cam, ix + 5, iy, -10);
+        const icicleLen = 20 + ((i * 7 + k * 11) % 3) * 11;
+        const bL = this._p(cam, ix - tx, iy - ty, -10);
+        const bR = this._p(cam, ix + tx, iy + ty, -10);
         const tip = this._p(cam, ix, iy, -10 - icicleLen);
-        ctx.fillStyle = k === 1 ? '#e2f4ff' : '#bae6fd';
-        ctx.strokeStyle = 'rgba(125, 200, 248, 0.65)';
-        ctx.lineWidth = 1;
-        this._poly(ctx, [bL, bR, tip]);
-        ctx.fill();
-        ctx.stroke();
+        const tri = [tip, bR, bL];
+        if (this._area(tri) > 0.2) {
+          ctx.fillStyle = k === 1 ? '#e2f4ff' : '#bae6fd';
+          ctx.strokeStyle = 'rgba(125, 200, 248, 0.65)';
+          ctx.lineWidth = 1;
+          this._poly(ctx, tri);
+          ctx.fill();
+          ctx.stroke();
+        }
       }
     }
 
@@ -1178,7 +1252,7 @@ export class Renderer {
     }
     ctx.stroke();
 
-    // 4. Frozen turquoise ice ponds nestled on the snow surface (matching Image 1)
+    // 4. Frozen turquoise ice ponds nestled on the snow surface
     const ponds = [
       { wx: -hw * 0.44, wy: -hh * 0.24, rx: hw * 0.16, ry: hh * 0.15, rot: 0.25 },
       { wx: hw * 0.46, wy: hh * 0.30, rx: hw * 0.19, ry: hh * 0.17, rot: -0.35 },
@@ -1211,7 +1285,6 @@ export class Renderer {
       ctx.lineWidth = 2.4;
       ctx.stroke();
 
-      // Specular ice highlight streak across pond
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.48)';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -1227,57 +1300,18 @@ export class Renderer {
     }
 
     // 4b. 3D Wooden fishing piers jutting onto the frozen ponds
-    const dockScale = Math.max(layout.baseRadius, 17.5);
     this._drawWoodenDock3D(ctx, cam, -hw * 0.33, -hh * 0.19, dockScale * 0.95, 0.35);
     this._drawWoodenDock3D(ctx, cam, hw * 0.36, hh * 0.38, dockScale * 1.12, 0.48);
     this._drawWoodenDock3D(ctx, cam, hw * 0.52, hh * 0.22, dockScale * 0.92, -0.4);
 
-    // 5. Floating satellite snow-capped ice islets below the front cliffs + scenic mini props
-    this._drawSatelliteIslet(ctx, cam, -hw * 0.24, hh * 0.94, hw * 0.16, hh * 0.11, -38, 105);
-    // Tiny wooden explorer shelter on front-left satellite islet
-    this._pyramid(
-      ctx,
-      cam,
-      -hw * 0.22,
-      hh * 0.94,
-      this._box(dockScale * 0.65),
-      -38,
-      -38 + dockScale * 1.0,
-      [148, 92, 44],
-      'rgba(55, 30, 12, 0.55)'
-    );
-
-    this._drawSatelliteIslet(ctx, cam, hw * 0.26, hh * 0.96, hw * 0.13, hh * 0.09, -46, 95);
-    // Glowing cyan crystal cluster on front-right satellite islet
-    const cR = dockScale * 0.58;
-    this._crystal(
-      ctx,
-      cam,
-      hw * 0.26,
-      hh * 0.96,
-      this._ngon(cR, 6, 0.2),
-      -46 + cR * 0.8,
-      -46 + cR * 2.6,
-      -46,
-      [72, 212, 255],
-      'rgba(224, 248, 255, 0.9)',
-      0.95
-    );
-    this._crystal(
-      ctx,
-      cam,
-      hw * 0.26 - cR * 0.85,
-      hh * 0.96 + cR * 0.3,
-      this._ngon(cR * 0.72, 6, 0.6),
-      -46 + cR * 0.5,
-      -46 + cR * 1.85,
-      -46,
-      [56, 189, 248],
-      'rgba(224, 248, 255, 0.85)',
-      0.92
-    );
-
-    this._drawSatelliteIslet(ctx, cam, -hw * 0.82, hh * 0.72, hw * 0.09, hh * 0.07, -52, 75);
+    // 5. Draw satellite islets that are in FRONT of the main island (camRy >= 0)
+    for (let s = 0; s < islets.length; s++) {
+      const isl = islets[s];
+      const camRy = isl.wx * cam._sinY + isl.wy * cam._cosY;
+      if (camRy >= 0) {
+        this._renderOneIsletWithProp(ctx, cam, isl, dockScale);
+      }
+    }
 
     ctx.restore();
   }
@@ -1492,7 +1526,7 @@ export class Renderer {
     ctx.fillRect(winPt.x - wr * 1.2, winPt.y - wr * 0.9, wr * 2.4, wr * 1.8);
     ctx.shadowBlur = 0;
 
-    // 3. Thick overhanging white snow-blanketed gable roof
+    // 3. Thick overhanging white snow-blanketed gable roof (depth-sorted for 360-degree camera orbit)
     const ew = w * 1.18;
     const ed = d * 1.22;
     const ridgeH = wallH + size * 0.68;
@@ -1503,37 +1537,30 @@ export class Renderer {
     const ridgeL = this._p(cam, wx - ew * 0.92, wy, ridgeH);
     const ridgeR = this._p(cam, wx + ew * 0.92, wy, ridgeH);
 
-    // Back roof slope
-    const backSlope = [eaveL1, eaveR1, ridgeR, ridgeL];
-    if (this._area(backSlope) > 0.3) {
-      this._poly(ctx, backSlope);
-      ctx.fillStyle = '#d8ebfc';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(140, 185, 228, 0.7)';
-      ctx.stroke();
+    const roofFaces = [
+      { pts: [eaveL1, eaveR1, ridgeR, ridgeL], fill: '#d8ebfc', stroke: 'rgba(140, 185, 228, 0.7)', lw: 1 },
+      { pts: [eaveR2, eaveL2, ridgeL, ridgeR], fill: '#f6fbff', stroke: '#c4dff6', lw: 1.5 },
+      { pts: [eaveL2, eaveL1, ridgeL], fill: '#8c5426', stroke: edge, lw: 1 },
+      { pts: [eaveR1, eaveR2, ridgeR], fill: '#8c5426', stroke: edge, lw: 1 }
+    ];
+    for (let rf = 0; rf < roofFaces.length; rf++) {
+      const fPts = roofFaces[rf].pts;
+      let zSum = 0;
+      for (let k = 0; k < fPts.length; k++) zSum += fPts[k].z;
+      roofFaces[rf].z = zSum / fPts.length;
     }
-    // Gable timber triangles (left and right)
-    for (const tri of [
-      [eaveL2, eaveL1, ridgeL],
-      [eaveR1, eaveR2, ridgeR]
-    ]) {
-      if (this._area(tri) > 0.3) {
-        this._poly(ctx, tri);
-        ctx.fillStyle = '#8c5426';
+    roofFaces.sort((a, b) => b.z - a.z);
+
+    for (let rf = 0; rf < roofFaces.length; rf++) {
+      const face = roofFaces[rf];
+      if (this._area(face.pts) > 0.25) {
+        this._poly(ctx, face.pts);
+        ctx.fillStyle = face.fill;
         ctx.fill();
-        ctx.strokeStyle = edge;
+        ctx.strokeStyle = face.stroke;
+        ctx.lineWidth = face.lw;
         ctx.stroke();
       }
-    }
-    // Front snow-blanketed roof slope
-    const frontSlope = [eaveR2, eaveL2, ridgeL, ridgeR];
-    if (this._area(frontSlope) > 0.3) {
-      this._poly(ctx, frontSlope);
-      ctx.fillStyle = '#f6fbff';
-      ctx.fill();
-      ctx.strokeStyle = '#c4dff6';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
     }
 
     // 4. Stone chimney + rising white smoke puffs
@@ -1582,7 +1609,7 @@ export class Renderer {
   }
 
   /**
-   * Draws a 3D tan canvas Explorer A-frame Tent and stacked firewood log pile.
+   * Draws a 3D tan canvas Explorer A-frame Tent and stacked firewood log pile (360-degree depth-sorted).
    */
   _drawCampTent3D(ctx, cam, wx, wy, size) {
     const w = size * 0.55;
@@ -1595,28 +1622,40 @@ export class Renderer {
     const pTopF = this._p(cam, wx, wy + d, h);
     const pTopB = this._p(cam, wx, wy - d, h);
 
+    const faces = [
+      { pts: [pFR, pBR, pTopB, pTopF], fill: '#d4a359' },
+      { pts: [pBL, pFL, pTopF, pTopB], fill: '#c8964c' },
+      { pts: [pFL, pFR, pTopF], fill: '#e8c17d', isDoor: true },
+      { pts: [pBR, pBL, pTopB], fill: '#b8863d' }
+    ];
+    for (let i = 0; i < faces.length; i++) {
+      const fp = faces[i].pts;
+      let zS = 0;
+      for (let k = 0; k < fp.length; k++) zS += fp[k].z;
+      faces[i].z = zS / fp.length;
+    }
+    faces.sort((a, b) => b.z - a.z);
+
     ctx.save();
-    // Side canvas slope
-    this._poly(ctx, [pFR, pBR, pTopB, pTopF]);
-    ctx.fillStyle = '#d4a359';
-    ctx.fill();
     ctx.strokeStyle = 'rgba(92, 58, 22, 0.5)';
     ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // Front A-frame opening
-    this._poly(ctx, [pFL, pFR, pTopF]);
-    ctx.fillStyle = '#e8c17d';
-    ctx.fill();
-    ctx.stroke();
-
-    // Dark tent interior doorway
-    const pDoorL = this._p(cam, wx - w * 0.35, wy + d, 0);
-    const pDoorR = this._p(cam, wx + w * 0.35, wy + d, 0);
-    const pDoorT = this._p(cam, wx, wy + d, h * 0.62);
-    this._poly(ctx, [pDoorL, pDoorR, pDoorT]);
-    ctx.fillStyle = '#4a2c11';
-    ctx.fill();
+    for (let i = 0; i < faces.length; i++) {
+      const f = faces[i];
+      if (this._area(f.pts) > 0.25) {
+        this._poly(ctx, f.pts);
+        ctx.fillStyle = f.fill;
+        ctx.fill();
+        ctx.stroke();
+        if (f.isDoor) {
+          const pDoorL = this._p(cam, wx - w * 0.35, wy + d, 0);
+          const pDoorR = this._p(cam, wx + w * 0.35, wy + d, 0);
+          const pDoorT = this._p(cam, wx, wy + d, h * 0.62);
+          this._poly(ctx, [pDoorL, pDoorR, pDoorT]);
+          ctx.fillStyle = '#4a2c11';
+          ctx.fill();
+        }
+      }
+    }
 
     // Stacked firewood log pile beside tent with snow cap
     this._prism(

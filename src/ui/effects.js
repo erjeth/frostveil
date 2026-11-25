@@ -228,10 +228,28 @@ export class EffectsManager {
       if (cx < -160) cx += width + 320;
       const cy = c.y * height;
 
-      if (hasCloudSvg) {
+      if (hasCloudSvg || true) {
+        // Soft volumetric cloud: several overlapping feathered puffs that gently breathe
+        const puffs = [
+          [-0.55, 0.10, 0.52], [-0.22, -0.12, 0.62], [0.12, -0.20, 0.70],
+          [0.45, -0.04, 0.58], [0.72, 0.12, 0.44], [0.0, 0.16, 0.80]
+        ];
         ctx.save();
-        ctx.globalAlpha = c.alpha * 0.78;
-        ctx.drawImage(cloudImg, cx - c.rx, cy - c.ry, c.rx * 2, c.ry * 1.85);
+        for (let p = 0; p < puffs.length; p++) {
+          const [ox, oy, sc] = puffs[p];
+          const breathe = 1 + 0.035 * Math.sin(t * 0.5 + i * 1.7 + p);
+          const px = cx + ox * c.rx;
+          const py = cy + oy * c.ry;
+          const pr = c.rx * 0.42 * sc * breathe;
+          const g = ctx.createRadialGradient(px, py - pr * 0.25, pr * 0.1, px, py, pr);
+          g.addColorStop(0, `rgba(255, 255, 255, ${(c.alpha * 0.85).toFixed(3)})`);
+          g.addColorStop(0.55, `rgba(232, 246, 255, ${(c.alpha * 0.45).toFixed(3)})`);
+          g.addColorStop(1, 'rgba(210, 236, 255, 0)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.ellipse(px, py, pr, pr * 0.62, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
       } else {
         const grad = ctx.createRadialGradient(cx, cy - c.ry * 0.2, c.ry * 0.15, cx, cy, c.rx);
