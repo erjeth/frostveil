@@ -42,7 +42,35 @@ export class Renderer {
     this.height = window.innerHeight;
     this.dpr = Math.min(2, window.devicePixelRatio || 1);
     this._bgGradient = null;
+    this._svgSprites = {};
+    this._preloadSvgAssets();
     this.resize();
+  }
+
+  _preloadSvgAssets() {
+    if (typeof Image === 'undefined') return;
+    const paths = {
+      badgeSafe: './src/ui/assets/nodes/badge-safe.svg',
+      badgeFrosted: './src/ui/assets/nodes/badge-frested.svg',
+      sparkle: './src/ui/assets/snow/sparkle.svg',
+      citadel: './src/ui/assets/world/citadel.svg',
+      houseRed: './src/ui/assets/world/house-red.svg',
+      houseFrosted: './src/ui/assets/world/house-frosted.svg',
+      treePine: './src/ui/assets/world/tree-pine.svg',
+      treePineSmall: './src/ui/assets/world/tree-pine-small.svg',
+      rock1: './src/ui/assets/world/rock-1.svg',
+      rock2: './src/ui/assets/world/rock-2.svg',
+      icePool: './src/ui/assets/world/ice-pool.svg'
+    };
+    for (let i = 1; i <= 6; i++) {
+      paths[`safe_${i}`] = `./src/ui/assets/nodes/badge-safe-${i}.svg`;
+      paths[`frested_${i}`] = `./src/ui/assets/nodes/badge-frested-${i}.svg`;
+    }
+    for (const [k, src] of Object.entries(paths)) {
+      const img = new Image();
+      img.src = src;
+      this._svgSprites[k] = img;
+    }
   }
 
   /**
@@ -603,22 +631,37 @@ export class Renderer {
   _drawPopulationBadge(ctx, node, isUrgent = false) {
     const bx = node.x + node.r * 0.58;
     const by = node.y + node.r * 0.42;
-    const br = Math.max(8.5, Math.min(11.5, node.r * 0.52));
+    const br = Math.max(9.5, Math.min(12.5, node.r * 0.56));
 
     ctx.save();
-    ctx.fillStyle = '#0d2240';
-    ctx.strokeStyle = isUrgent ? '#f43f5e' : node.isCitadel ? '#fbbf24' : '#38bdf8';
-    ctx.lineWidth = 2.0;
-    ctx.beginPath();
-    ctx.arc(bx, by, br, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+    const pop = node.population;
+    const exactKey = pop >= 1 && pop <= 6 ? `${isUrgent ? 'frested' : 'safe'}_${pop}` : null;
+    const exactImg = exactKey && this._svgSprites ? this._svgSprites[exactKey] : null;
+    const baseImg = this._svgSprites ? this._svgSprites[isUrgent ? 'badgeFrosted' : 'badgeSafe'] : null;
+
+    if (exactImg && exactImg.complete && exactImg.naturalWidth > 0) {
+      ctx.drawImage(exactImg, bx - br, by - br, br * 2, br * 2);
+      ctx.restore();
+      return;
+    }
+
+    if (baseImg && baseImg.complete && baseImg.naturalWidth > 0) {
+      ctx.drawImage(baseImg, bx - br, by - br, br * 2, br * 2);
+    } else {
+      ctx.fillStyle = '#14407a';
+      ctx.strokeStyle = isUrgent ? '#e5484d' : node.isCitadel ? '#fbbf24' : '#bfe9ff';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.arc(bx, by, br, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = `800 ${Math.round(br * 1.15)}px system-ui, -apple-system, sans-serif`;
+    ctx.font = `800 ${Math.round(br * 1.12)}px system-ui, -apple-system, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(String(node.population), bx, by + 0.5);
+    ctx.fillText(String(pop), bx, by + 0.5);
     ctx.restore();
   }
 
@@ -1354,13 +1397,22 @@ export class Renderer {
   }
 
   /**
-   * Draws a 3D snow-covered evergreen pine tree at (wx, wy).
+   * Draws a 3D snow-covered evergreen pine tree at (wx, wy), using world/tree-pine.svg when loaded.
    */
-  _drawPineTree3D(ctx, cam, wx, wy, size) {
+  _drawPineTree3D(ctx, cam, wx, wy, size, seed = 0) {
+    const imgKey = seed % 3 === 0 ? 'treePineSmall' : 'treePine';
+    const img = this._svgSprites && this._svgSprites[imgKey];
+    if (img && img.complete && img.naturalWidth > 0) {
+      const p = this._p(cam, wx, wy, 0);
+      const w = size * 1.65 * p.f;
+      const h = w * 1.48;
+      ctx.drawImage(img, p.x - w * 0.5, p.y - h * 0.88, w, h);
+      return;
+    }
     const edge = 'rgba(20, 50, 75, 0.22)';
     // Timber trunk
     this._prism(ctx, cam, wx, wy, this._box(size * 0.15), 0, size * 0.36, [102, 66, 38], null, null);
-    // 3 stacked evergreen cones with white snow caps on each tier (matching Image 1)
+    // 3 stacked evergreen cones with white snow caps on each tier
     const tiers = [
       { r: size * 0.72, h0: size * 0.25, hMid: size * 0.75, h1: size * 1.15 },
       { r: size * 0.56, h0: size * 0.80, hMid: size * 1.22, h1: size * 1.64 },
@@ -1368,17 +1420,24 @@ export class Renderer {
     ];
     for (let i = 0; i < tiers.length; i++) {
       const tr = tiers[i];
-      // Lower green pine foliage
       this._pyramid(ctx, cam, wx, wy, this._ngon(tr.r, 6, 0.3), tr.h0, tr.h1, [44, 118, 78], edge);
-      // Upper white snow blanket cap on each branch tier
       this._pyramid(ctx, cam, wx, wy, this._ngon(tr.r * 0.78, 6, 0.3), tr.hMid, tr.h1 + 1, [242, 249, 255], 'rgba(180, 215, 245, 0.45)');
     }
   }
 
   /**
-   * Draws a 3D low-poly snow-topped boulder at (wx, wy).
+   * Draws a 3D low-poly snow-topped boulder at (wx, wy), using world/rock-1.svg or rock-2.svg when loaded.
    */
-  _drawRock3D(ctx, cam, wx, wy, size) {
+  _drawRock3D(ctx, cam, wx, wy, size, seed = 0) {
+    const imgKey = seed % 2 === 0 ? 'rock1' : 'rock2';
+    const img = this._svgSprites && this._svgSprites[imgKey];
+    if (img && img.complete && img.naturalWidth > 0) {
+      const p = this._p(cam, wx, wy, 0);
+      const w = size * 1.55 * p.f;
+      const h = w * 0.8;
+      ctx.drawImage(img, p.x - w * 0.5, p.y - h * 0.78, w, h);
+      return;
+    }
     const ring = this._ngon(size * 0.62, 5, 0.4);
     this._prism(
       ctx,
@@ -1678,7 +1737,7 @@ export class Renderer {
       if (item.kind === 'prop') {
         const pr = item.prop;
         if (pr.type === 'tree') {
-          this._drawPineTree3D(ctx, cam, pr.wx, pr.wy, pr.size);
+          this._drawPineTree3D(ctx, cam, pr.wx, pr.wy, pr.size, pr.seed);
         } else if (pr.type === 'lodge') {
           this._drawWatermillLodge3D(ctx, cam, pr.wx, pr.wy, pr.size, t);
         } else if (pr.type === 'tent') {
@@ -1686,7 +1745,7 @@ export class Renderer {
         } else if (pr.type === 'penguin') {
           this._drawPenguin3D(ctx, cam, pr.wx, pr.wy, pr.size);
         } else {
-          this._drawRock3D(ctx, cam, pr.wx, pr.wy, pr.size);
+          this._drawRock3D(ctx, cam, pr.wx, pr.wy, pr.size, pr.seed);
         }
         continue;
       }
@@ -1830,9 +1889,17 @@ export class Renderer {
     const warded = st === NodeState.WARDED;
     const edge = 'rgba(20, 42, 74, 0.42)';
 
-    // ---- The Citadel: Grand Medieval Stone-and-Timber Castle with Red Turrets, Gold Spire & Drawbridge (Image 1) ----
+    // ---- The Citadel: Grand Medieval Stone-and-Timber Castle or world/citadel.svg ----
     if (node.isCitadel) {
       const cRw = Math.max(rw * 1.35, 24);
+      const citadelSprite = this._svgSprites && this._svgSprites.citadel;
+      if (citadelSprite && citadelSprite.complete && citadelSprite.naturalWidth > 0 && !frosted) {
+        const basePt = this._p(cam, wx, wy, 4);
+        const cw = cRw * 2.85 * basePt.f;
+        const ch = cw * (190 / 160);
+        ctx.drawImage(citadelSprite, basePt.x - cw * 0.5, basePt.y - ch * 0.88, cw, ch);
+        return cRw * 2.5;
+      }
       const a = cRw * 0.92;
       const H = cRw * 2.25;
       const stoneWall = frosted ? [130, 195, 232] : [108, 122, 142];
@@ -1991,6 +2058,29 @@ export class Renderer {
 
     // ---- Draw a 3D glowing street-lamp lantern post beside every settlement pedestal ----
     this._drawLanternPost3D(ctx, cam, wx, wy, rw);
+
+    // ---- Use world/house-frosted.svg or world/house-red.svg when loaded ----
+    const houseSprite = this._svgSprites && this._svgSprites[frosted ? 'houseFrosted' : 'houseRed'];
+    if (houseSprite && houseSprite.complete && houseSprite.naturalWidth > 0) {
+      const basePt = this._p(cam, wx, wy, 3);
+      const hw = rw * 1.95 * basePt.f;
+      const hh = hw;
+      ctx.drawImage(houseSprite, basePt.x - hw * 0.5, basePt.y - hh * 0.82, hw, hh);
+
+      if (warded) {
+        const flicker = 1 + Math.sin(t * 9 + node.id * 1.7) * 0.08;
+        const fp = { x: basePt.x, y: basePt.y - hh * 0.78 };
+        const glowR = rw * 1.7 * node.f * flicker;
+        const glow = ctx.createRadialGradient(fp.x, fp.y, 0, fp.x, fp.y, glowR);
+        glow.addColorStop(0, 'rgba(255, 196, 82, 0.58)');
+        glow.addColorStop(1, 'rgba(255, 140, 20, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(fp.x, fp.y, glowR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      return rw * 1.45;
+    }
 
     // ---- Frosted settlement: crystalline ice spikes around the frozen cabin ----
     if (frosted) {

@@ -290,28 +290,20 @@ export class ScreenManager {
       card.setAttribute('role', 'listitem');
       card.disabled = !unlocked;
 
-      const starsHtml = this._formatStarsHtml(rec.stars);
-      const lockBadge = unlocked ? starsHtml : '<span title="Win previous level to unlock">🔒 Locked</span>';
+      const starsHtml = this._formatStarsHtml(rec.stars > 0 ? rec.stars : 0);
+      const lockBadge = unlocked ? starsHtml : '<span class="lock-pill">Locked</span>';
       const bestLine = rec.bestPercent > 0
-        ? `Best Saved: ${rec.bestPercent}% (${rec.bestSaved} pop)`
+        ? `Best: ${rec.bestPercent}% (${rec.bestSaved} pop)`
         : unlocked
-        ? 'Not yet completed'
-        : 'Win Level ' + (spec.id - 1) + ' to unlock';
+        ? `n=${spec.n} · k=${spec.k} · Goal ${spec.targetPercent}%`
+        : `Win Realm ${spec.id - 1} to unlock`;
 
       card.innerHTML = `
-        <div>
-          <div class="level-card-top">
-            <span class="level-num">Realm ${spec.id}</span>
-            <span class="level-stars">${lockBadge}</span>
-          </div>
-          <div class="level-name">${spec.name}</div>
-          <div class="level-meta">
-            <span>Nodes <strong>${spec.n}</strong></span>
-            <span>Actions <strong>${spec.k}/t</strong></span>
-            <span>Origins <strong>${spec.sources}</strong></span>
-            <span>Goal <strong>${spec.targetPercent}%</strong></span>
-          </div>
+        <div class="sign-card-header">
+          <span class="level-num">REALM ${spec.id}</span>
+          <span class="level-stars">${lockBadge}</span>
         </div>
+        <div class="level-name">${spec.name}</div>
         <div class="level-best">${bestLine}</div>
       `;
 
@@ -357,12 +349,9 @@ export class ScreenManager {
 
       const starsHtml = unlocked
         ? this._formatStarsHtml(rec.stars > 0 ? rec.stars : 3)
-        : '<span class="star-empty">🔒</span>';
+        : '<span class="lock-pill">Locked</span>';
 
       btn.innerHTML = `
-        <div class="wood-snow-cap" aria-hidden="true"></div>
-        <span class="wood-rope wood-rope-left" aria-hidden="true"></span>
-        <span class="wood-rope wood-rope-right" aria-hidden="true"></span>
         <div class="wood-card-top">
           <span class="wood-realm-num">REALM ${spec.id}</span>
           <span class="wood-realm-stars">${starsHtml}</span>
@@ -403,7 +392,7 @@ export class ScreenManager {
       banner.className = `result-banner ${outcome.won ? 'won' : 'lost'}`;
     }
     if (starsEl) {
-      starsEl.textContent = '★'.repeat(outcome.stars) + '☆'.repeat(Math.max(0, 3 - outcome.stars));
+      starsEl.innerHTML = this._formatStarsHtml(outcome.stars);
     }
     if (titleEl) {
       titleEl.textContent = outcome.won ? 'Frost Contained!' : 'The Realm Has Fallen';
@@ -647,9 +636,9 @@ export class ScreenManager {
     let html = '';
     for (let i = 1; i <= 3; i++) {
       if (i <= stars) {
-        html += '<span>★</span>';
+        html += '<img src="./src/ui/assets/ui/star-filled.svg" alt="★" class="star-svg" />';
       } else {
-        html += '<span class="star-empty">★</span>';
+        html += '<img src="./src/ui/assets/ui/star-empty.svg" alt="☆" class="star-svg star-empty-svg" />';
       }
     }
     return html;

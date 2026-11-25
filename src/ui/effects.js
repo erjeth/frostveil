@@ -46,6 +46,26 @@ export class EffectsManager {
     this.severedGhosts = [];
     this.frostCreeps = [];
     this.beaconPulses = [];
+
+    // Preload SVG cloud and snowflake sprites from src/ui/assets/
+    this._sprites = {};
+    this._preloadSvgSprites();
+  }
+
+  _preloadSvgSprites() {
+    if (typeof Image === 'undefined') return;
+    const files = {
+      cloud: './src/ui/assets/world/cloud.svg',
+      flake1: './src/ui/assets/snow/snowflake-1.svg',
+      flake2: './src/ui/assets/snow/snowflake-2.svg',
+      flake3: './src/ui/assets/snow/snowflake-3.svg',
+      particle: './src/ui/assets/snow/snow-particle.svg'
+    };
+    for (const [key, src] of Object.entries(files)) {
+      const img = new Image();
+      img.src = src;
+      this._sprites[key] = img;
+    }
   }
 
   _initReducedMotionListener() {
@@ -197,23 +217,33 @@ export class EffectsManager {
       ctx.stroke();
     }
 
-    // 3. Soft volumetric cloud sea around the lower horizon
+    // 3. Soft volumetric cloud sea around the lower horizon (using world/cloud.svg when loaded)
     const parallax = yaw * width * 0.05;
+    const cloudImg = this._sprites && this._sprites.cloud;
+    const hasCloudSvg = cloudImg && cloudImg.complete && cloudImg.naturalWidth > 0;
+
     for (let i = 0; i < this._clouds.length; i++) {
       const c = this._clouds[i];
       let cx = ((c.x * width + t * c.speed * width + parallax) % (width + 320)) - 160;
       if (cx < -160) cx += width + 320;
       const cy = c.y * height;
 
-      const grad = ctx.createRadialGradient(cx, cy - c.ry * 0.2, c.ry * 0.15, cx, cy, c.rx);
-      grad.addColorStop(0, `rgba(248, 253, 255, ${c.alpha})`);
-      grad.addColorStop(0.55, `rgba(214, 240, 255, ${c.alpha * 0.65})`);
-      grad.addColorStop(1, 'rgba(165, 218, 250, 0)');
+      if (hasCloudSvg) {
+        ctx.save();
+        ctx.globalAlpha = c.alpha * 0.78;
+        ctx.drawImage(cloudImg, cx - c.rx, cy - c.ry, c.rx * 2, c.ry * 1.85);
+        ctx.restore();
+      } else {
+        const grad = ctx.createRadialGradient(cx, cy - c.ry * 0.2, c.ry * 0.15, cx, cy, c.rx);
+        grad.addColorStop(0, `rgba(248, 253, 255, ${c.alpha})`);
+        grad.addColorStop(0.55, `rgba(214, 240, 255, ${c.alpha * 0.65})`);
+        grad.addColorStop(1, 'rgba(165, 218, 250, 0)');
 
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, c.rx, c.ry, 0, 0, Math.PI * 2);
-      ctx.fill();
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, c.rx, c.ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     // Bottom cloud mist veil
@@ -230,12 +260,24 @@ export class EffectsManager {
   drawSnow(ctx, width, height) {
     ctx.save();
     ctx.fillStyle = '#ffffff';
+    const f1 = this._sprites && this._sprites.flake1;
+    const f2 = this._sprites && this._sprites.flake2;
+    const hasFlakes = f1 && f1.complete && f1.naturalWidth > 0 && f2 && f2.complete && f2.naturalWidth > 0;
+
     for (let i = 0; i < this.snow.length; i++) {
       const p = this.snow[i];
       ctx.globalAlpha = p.alpha;
-      ctx.beginPath();
-      ctx.arc(p.x * width, p.y * height, p.r, 0, Math.PI * 2);
-      ctx.fill();
+      const sx = p.x * width;
+      const sy = p.y * height;
+      if (hasFlakes && i % 5 === 0) {
+        const img = i % 10 === 0 ? f1 : f2;
+        const sz = p.r * 4.2;
+        ctx.drawImage(img, sx - sz * 0.5, sy - sz * 0.5, sz, sz);
+      } else {
+        ctx.beginPath();
+        ctx.arc(sx, sy, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     ctx.restore();
   }

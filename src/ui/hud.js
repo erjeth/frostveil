@@ -188,10 +188,10 @@ export class HudManager {
 
       const stateLabel =
         st === NodeState.FROSTED
-          ? '❄️ Frosted'
+          ? '<span class="tt-state tt-frosted"><img src="./src/ui/assets/icons/frost.svg" alt="" class="tt-icon" /> Frosted</span>'
           : st === NodeState.WARDED
-          ? '🔥 Warded (Beacon)'
-          : '🏠 Clear';
+          ? '<span class="tt-state tt-warded"><img src="./src/ui/assets/icons/beacon.svg" alt="" class="tt-icon" /> Warded</span>'
+          : '<span class="tt-state tt-clear"><img src="./src/ui/assets/icons/shield.svg" alt="" class="tt-icon" /> Clear</span>';
 
       let etaLabel = 'Never / Protected (✓)';
       if (st === NodeState.FROSTED) {
@@ -241,8 +241,10 @@ export class HudManager {
 
     this.elTooltip.hidden = false;
     const pad = 16;
-    const maxW = window.innerWidth - 230;
-    const maxH = window.innerHeight - 130;
+    const ttW = Math.max(264, this.elTooltip.offsetWidth || 264);
+    const ttH = Math.max(150, this.elTooltip.offsetHeight || 150);
+    const maxW = window.innerWidth - ttW - 18;
+    const maxH = window.innerHeight - ttH - 18;
     const left = Math.max(12, Math.min(maxW, clientX + pad));
     const top = Math.max(12, Math.min(maxH, clientY + pad));
     this.elTooltip.style.left = `${left}px`;

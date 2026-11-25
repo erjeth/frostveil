@@ -189,9 +189,7 @@ class FrostveilApp {
     const btn = document.getElementById('btn-mute');
     const muted = this.audio.muted;
     if (icon) {
-      icon.innerHTML = muted
-        ? '<svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="3,7 7,7 11,3 11,15 7,11 3,11"/><line x1="14" y1="6" x2="17" y2="12"/><line x1="17" y1="6" x2="14" y2="12"/></svg>'
-        : '<svg width="14" height="14" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="3,7 7,7 11,3 11,15 7,11 3,11"/><path d="M13.5 6.5a3.5 3.5 0 0 1 0 5"/><path d="M15.5 4.5a6.5 6.5 0 0 1 0 9"/></svg>';
+      icon.innerHTML = `<img src="./src/ui/assets/icons/sound.svg" alt="" class="icon-img icon-dark" style="opacity:${muted ? '0.45' : '1'}" />`;
     }
     if (label) label.textContent = muted ? 'Muted' : 'Sound';
     if (btn) btn.setAttribute('aria-pressed', String(muted));
