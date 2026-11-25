@@ -1,0 +1,13 @@
+{
+  "name": "frostveil",
+  "version": "1.0.0",
+  "description": "Frostveil: a turn-based Firefighter-Problem strategy game (DAA Quiz 2).",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test",
+    "bench": "node bench/run.js",
+    "serve": "python3 -m http.server 8080"
+  }
+}
