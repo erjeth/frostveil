@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { LEVEL_SPECS, buildLevel, connectedComponents } from '../src/core/index.js';
 
-// The table from the project contract (section 7). Only the seed may ever be changed (and documented).
+// The table from the project contract (section 7). Only a seed may ever be changed, and every
+// change must be listed in SEED_OVERRIDES AND documented in docs/CONTRACT.md.
+const SEED_OVERRIDES = { 6: 1051, 8: 1027 }; // contract seeds 1006 / 1008 were not winnable by any strategy
 const CONTRACT_TABLE = [
   [1, 12, 1, 1, 50, 1001],
   [2, 16, 1, 1, 55, 1002],
@@ -23,7 +25,11 @@ test('LEVEL_SPECS: ids 1..8 with the contract numbers (n, k, sources, target, se
     assert.equal(s.k, k);
     assert.equal(s.sources, sources);
     assert.equal(s.targetPercent, targetPercent);
-    assert.equal(s.seed, seed, `seed of level ${id} differs from the contract: document the change in docs/CONTRACT.md`);
+    assert.equal(
+      s.seed,
+      SEED_OVERRIDES[id] ?? seed,
+      `seed of level ${id} differs from the contract: document the change in docs/CONTRACT.md`,
+    );
     assert.equal(typeof s.name, 'string');
     assert.ok(s.name.length > 0);
     assert.equal(typeof s.avgDegree, 'number');
