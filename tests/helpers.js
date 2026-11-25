@@ -79,3 +79,30 @@ export function refBridges(g, blocked) {
 }
 
 export { mulberry32 };
+
+/**
+ * Hand-built Level for simulation tests (bypasses the generator).
+ * pops: array of populations (default all 1). citadel: node id.
+ */
+export function makeLevel({ n, edges, sources = [0], pops, citadel = n - 1, k = 1, targetPercent = 50 }) {
+  const population = pops ?? new Array(n).fill(1);
+  const nodes = Array.from({ length: n }, (_, id) => ({
+    id,
+    x: n > 1 ? id / (n - 1) : 0,
+    y: 0.5,
+    population: population[id],
+    isCitadel: id === citadel,
+  }));
+  return {
+    seed: 0,
+    n,
+    k,
+    targetPercent,
+    sources,
+    graph: fromEdges(n, edges),
+    nodes,
+    totalPopulation: population.reduce((a, b) => a + b, 0),
+  };
+}
+export const pathLevel = (n, opts = {}) =>
+  makeLevel({ n, edges: Array.from({ length: n - 1 }, (_, i) => [i, i + 1]), ...opts });
