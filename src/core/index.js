@@ -19,3 +19,11 @@ export {
 } from './simulation.js';
 export { generateLevel } from './levelGen.js';
 export { LEVEL_SPECS, buildLevel } from './levels.js';
+export {
+  randomStrategy,
+  maxDegreeStrategy,
+  articulationGreedyStrategy,
+  STRATEGIES,
+  playOut,
+  bruteForceOptimal,
+} from './strategies.js';
