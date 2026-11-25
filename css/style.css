@@ -1770,3 +1770,837 @@ html, body {
     display: none;
   }
 }
+
+
+/* ==========================================================================
+   DIORAMA FANTASY UI: CARVED WOOD, FROST CRYSTALS, SNOW CAPS & ICICLES
+   (MATCHING REFERENCE IMAGE 1)
+   ========================================================================== */
+
+/* 1. Golden Embossed FROSTVEIL Hero Title with White Snow Cap on Letters */
+.game-hero-title-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.game-hero-title {
+  font-size: clamp(2.6rem, 4.7vw, 3.9rem);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #f7b928;
+  -webkit-text-stroke: 8px #182c46;
+  paint-order: stroke fill;
+  text-shadow:
+    0 5px 0 #0f1d30,
+    0 10px 18px rgba(10, 26, 48, 0.48);
+  line-height: 1.05;
+}
+
+/* Snow crown clipped to the top 30% of the FROSTVEIL letters */
+.game-hero-snowcap {
+  position: absolute;
+  inset: 0;
+  font-size: clamp(2.6rem, 4.7vw, 3.9rem);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  -webkit-text-stroke: 2px #d8efff;
+  paint-order: stroke fill;
+  line-height: 1.05;
+  clip-path: polygon(0 0, 100% 0, 100% 34%, 0 37%);
+  filter: drop-shadow(0 2px 1px rgba(120, 185, 238, 0.9));
+  pointer-events: none;
+}
+
+/* 2. Top-Center Fantasy Plaques (Turn Stone, Actions Wood, Ice-Crystal Gauge, Citadel Wood) */
+.hud-center-group {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hud-plaque {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  box-shadow: 0 8px 18px rgba(10, 26, 48, 0.36);
+}
+
+/* Snow drift cap on top of every top plaque */
+.hud-plaque::before,
+.hud-pod-identity::before,
+.hud-pod-utils::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 8px;
+  right: 8px;
+  height: 7px;
+  background: linear-gradient(180deg, #ffffff 0%, #dff2ff 75%, #a8d4f5 100%);
+  border-radius: 8px 8px 5px 5px;
+  box-shadow: 0 2px 3px rgba(14, 38, 70, 0.25);
+  pointer-events: none;
+}
+
+.hud-pod-identity,
+.hud-pod-utils {
+  position: relative;
+}
+
+/* Chiseled Slate-Ice Turn Plaque */
+.hud-plaque-turn {
+  background: linear-gradient(180deg, #3b5372 0%, #263952 100%);
+  border: 2px solid #86b9e0;
+  border-bottom: 4px solid #172538;
+}
+
+/* Carved Wood Plaques (ACTIONS & CITADEL) */
+.hud-plaque-wood {
+  background: linear-gradient(180deg, #8b5a2b 0%, #6d431d 60%, #523012 100%);
+  border: 2px solid #b07a45;
+  border-bottom: 4px solid #381f09;
+  box-shadow:
+    0 8px 18px rgba(10, 26, 48, 0.38),
+    inset 0 1px 0 rgba(255, 226, 182, 0.3);
+}
+
+.hud-plaque-wood .stat-label {
+  color: #f3e3ce;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.hud-plaque-wood #hud-actions {
+  color: #fde047;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+.hud-plaque-wood #hud-citadel.status-safe {
+  color: #4ade80;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+}
+
+/* Hanging Icicles under Citadel Plaque & Bottom Wooden Card */
+.hud-plaque-icicles::after,
+.wood-realm-card:last-child::after {
+  content: '';
+  position: absolute;
+  bottom: -11px;
+  left: 10px;
+  right: 10px;
+  height: 10px;
+  background:
+    conic-gradient(from 155deg at 12% 100%, #bae6fd 0deg, #ffffff 25deg, transparent 50deg),
+    conic-gradient(from 155deg at 22% 100%, #7dd3fc 0deg, #e0f2fe 25deg, transparent 50deg),
+    conic-gradient(from 155deg at 82% 100%, #bae6fd 0deg, #ffffff 25deg, transparent 50deg),
+    conic-gradient(from 155deg at 92% 100%, #7dd3fc 0deg, #e0f2fe 25deg, transparent 50deg);
+  pointer-events: none;
+}
+
+/* Sculpted Translucent Ice-Crystal Population Gauge */
+.hud-plaque-ice {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 225px;
+  padding: 7px 14px 9px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(165, 232, 255, 0.78) 0%, rgba(56, 168, 228, 0.82) 100%);
+  border: 2.5px solid #e0f7ff;
+  border-bottom: 4px solid #1d6fa8;
+  box-shadow:
+    0 10px 22px rgba(12, 45, 84, 0.35),
+    inset 0 2px 4px rgba(255, 255, 255, 0.65);
+}
+
+.hud-plaque-ice .pop-header {
+  color: #0c2540;
+  font-weight: 800;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+  margin-bottom: 2px;
+}
+
+.hud-plaque-ice .target-label {
+  color: #0f3156;
+}
+
+.hud-plaque-ice .progress-track {
+  height: 11px;
+  background: rgba(11, 37, 69, 0.55);
+  border: 1.5px solid rgba(255, 255, 255, 0.65);
+  border-radius: 8px;
+}
+
+.hud-plaque-ice .progress-fill {
+  border-radius: 6px;
+  background: linear-gradient(90deg, #22d3ee 0%, #38bdf8 55%, #bae6fd 100%);
+  box-shadow: 0 0 10px rgba(125, 249, 255, 0.75);
+}
+
+/* Top-Left Identity Pod with Ice-Crystal Question Button */
+.hud-pod-identity {
+  border-radius: 12px;
+  border: 2px solid #85bae0;
+  border-bottom: 4px solid #1a2c44;
+  padding: 7px 12px;
+}
+
+.hud-legend-trigger {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #bae6fd 0%, #38bdf8 100%);
+  border: 2px solid #ffffff;
+  color: #0c2540;
+  font-weight: 900;
+  box-shadow: 0 2px 6px rgba(12, 37, 64, 0.35);
+}
+
+/* Top-Right Utility Pod & Chiseled Ice-Crystal Buttons */
+.hud-pod-utils {
+  border-radius: 12px;
+  border: 2px solid #85bae0;
+  border-bottom: 4px solid #1a2c44;
+}
+
+#btn-view-reset {
+  background: linear-gradient(180deg, #e0f7ff 0%, #7dd3fc 100%);
+  border: 1.5px solid #ffffff;
+  color: #0c2847;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(12, 37, 64, 0.25);
+}
+
+#btn-game-menu {
+  color: #fde047;
+  font-weight: 800;
+}
+
+#btn-mute {
+  background: linear-gradient(180deg, #d8f3ff 0%, #74cbf7 100%);
+  border: 2px solid #ffffff;
+  border-bottom: 3.5px solid #2980b9;
+  border-radius: 10px;
+  color: #0d2b4d;
+  font-weight: 800;
+  box-shadow: 0 6px 14px rgba(12, 37, 64, 0.3);
+}
+
+/* 3. Left Expedition Command Panel: Sculpted Top Snow Drift & Rope-Bound Wooden Cards */
+.expedition-sidebar {
+  border: 2.5px solid #769ec2;
+  border-bottom: 5px solid #19293d;
+}
+
+.expedition-sidebar::before {
+  content: '';
+  position: absolute;
+  top: -11px;
+  left: 10px;
+  right: 10px;
+  height: 15px;
+  background:
+    radial-gradient(ellipse at 26% 70%, #ffffff 0%, #e0f2fe 65%, transparent 72%),
+    radial-gradient(ellipse at 68% 75%, #ffffff 0%, #d8eefc 65%, transparent 72%),
+    linear-gradient(180deg, #ffffff 0%, #cde7fa 100%);
+  border-radius: 14px 14px 6px 6px;
+  box-shadow: 0 3px 4px rgba(15, 36, 66, 0.28);
+  pointer-events: none;
+}
+
+/* Rope knot bindings on left & right of wooden cards */
+.wood-rope {
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 22px;
+  transform: translateY(-50%);
+  background: repeating-linear-gradient(
+    45deg,
+    #d6a874 0px,
+    #d6a874 3px,
+    #8c5a2b 3px,
+    #8c5a2b 6px
+  );
+  border: 1px solid #4a2a0c;
+  border-radius: 3px;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.wood-rope-left {
+  left: -4px;
+}
+
+.wood-rope-right {
+  right: -4px;
+}
+
+/* 4. Right Inspection Tooltip: Chiseled Ice-Crystal Frame */
+.map-tooltip {
+  background: linear-gradient(180deg, rgba(32, 54, 82, 0.94) 0%, rgba(20, 36, 58, 0.96) 100%);
+  border: 3px solid #bae6fd;
+  border-bottom: 5px solid #38bdf8;
+  border-radius: 12px;
+  box-shadow:
+    0 14px 28px rgba(8, 24, 48, 0.5),
+    inset 0 0 12px rgba(125, 211, 252, 0.25);
+}
+
+.map-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 12px;
+  right: 12px;
+  height: 7px;
+  background: linear-gradient(180deg, #ffffff 0%, #cde8fc 100%);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+/* 5. Bottom Tactical Dock: Snow Drifts, Chiseled Ice-Crystal Active Pills & Golden Wax-Seal Hint Badge */
+.dock-capsule {
+  position: relative;
+  border: 2px solid #7aa6cc;
+  border-bottom: 4px solid #18283c;
+  padding: 5px 7px;
+}
+
+.dock-capsule::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 18px;
+  right: 18px;
+  height: 7px;
+  background: linear-gradient(180deg, #ffffff 0%, #d4ecfc 80%, #9ccaf0 100%);
+  border-radius: 8px 8px 4px 4px;
+  box-shadow: 0 2px 2px rgba(12, 32, 58, 0.25);
+  pointer-events: none;
+}
+
+#btn-tool-auto.active,
+.lens-btn[aria-pressed="true"] {
+  background: linear-gradient(180deg, #bae6fd 0%, #38bdf8 55%, #0284c7 100%);
+  border: 1.5px solid #ffffff;
+  color: #08223c;
+  font-weight: 800;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.45), inset 0 1px 2px #ffffff;
+}
+
+.btn-hint {
+  background: linear-gradient(180deg, rgba(125, 211, 252, 0.28) 0%, rgba(14, 116, 144, 0.42) 100%);
+  border: 1.5px solid rgba(186, 230, 253, 0.65);
+  color: #fde047;
+  font-weight: 800;
+}
+
+.hint-count-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fde047 0%, #d97706 70%, #92400e 100%);
+  border: 1.5px solid #fef08a;
+  color: #271202;
+  font-weight: 900;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+}
+
+
+/* ==========================================================================
+   USER SVG ASSET KIT INTEGRATION (src/ui/assets/{ui,icons,logo,nodes,snow,world})
+   ========================================================================== */
+
+body {
+  background: url('../src/ui/assets/world/background.svg') center / cover no-repeat fixed;
+}
+
+/* SVG Icon Helpers */
+.icon-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.icon-img-sm {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.icon-dark {
+  filter: brightness(0.22) sepia(1) hue-rotate(185deg) saturate(4);
+}
+
+.star-svg {
+  width: 17px;
+  height: 17px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+/* Title & Hero FROSTVEIL Logo SVG (logo/logo-frostveil.svg) */
+.title-logo-wrap {
+  margin: 4px auto 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.title-logo-svg {
+  width: min(440px, 85vw);
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 8px 18px rgba(10, 28, 54, 0.45));
+}
+
+.game-hero-banner {
+  top: 72px;
+}
+
+.game-hero-logo-svg {
+  width: clamp(250px, 28vw, 370px);
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 6px 14px rgba(10, 28, 54, 0.38));
+}
+
+/* Modal Top Snow Cap (snow/snow-cap.svg) */
+.modal-container {
+  position: relative;
+  overflow: visible;
+}
+
+.modal-snow-cap {
+  position: absolute;
+  top: -16px;
+  left: 24px;
+  right: 24px;
+  height: 28px;
+  background: url('../src/ui/assets/snow/snow-cap.svg') center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+
+/* SVG Kit Buttons (button-primary.svg, button-ice.svg, button-stone.svg, button-gold.svg) */
+.btn-svg-primary,
+.btn-svg-ice,
+.btn-svg-stone,
+.btn-svg-gold {
+  border: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+  background-position: center !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  padding: 12px 26px 15px !important;
+  font-weight: 800 !important;
+  transition: transform 0.1s ease, filter 0.15s ease !important;
+}
+
+.btn-svg-primary {
+  background-image: url('../src/ui/assets/ui/button-primary.svg') !important;
+  color: #ffffff !important;
+  text-shadow: 0 2px 0 rgba(10, 32, 72, 0.65);
+}
+
+.btn-svg-ice {
+  background-image: url('../src/ui/assets/ui/button-ice.svg') !important;
+  color: #0f2c52 !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.btn-svg-stone {
+  background-image: url('../src/ui/assets/ui/button-stone.svg') !important;
+  color: #e2e8f0 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.btn-svg-gold {
+  background-image: url('../src/ui/assets/ui/button-gold.svg') !important;
+  color: #2b1402 !important;
+  text-shadow: 0 1px 0 rgba(255, 240, 180, 0.65);
+}
+
+.btn-svg-primary:hover:not(:disabled),
+.btn-svg-ice:hover:not(:disabled),
+.btn-svg-stone:hover:not(:disabled),
+.btn-svg-gold:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-2px);
+}
+
+/* Global Sound Button using ui/button-ice.svg */
+#btn-mute.svg-btn-ice {
+  background: url('../src/ui/assets/ui/button-ice.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 9px 18px 11px !important;
+  color: #0f2c52 !important;
+  font-weight: 800 !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+/* ==================== TOP HUD WITH SVG ASSETS ==================== */
+.hud-topbar {
+  top: 8px;
+  align-items: flex-start;
+}
+
+.hud-pod-identity::before,
+.hud-pod-utils::before,
+.hud-plaque::before,
+.hud-plaque-icicles::after {
+  display: none !important;
+}
+
+/* Pod 1: ui/pill-dark-small.svg + ui/button-round.svg */
+.hud-pod-identity {
+  background: url('../src/ui/assets/ui/pill-dark-small.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 10px 18px 12px 22px !important;
+  min-height: 54px;
+}
+
+.hud-legend-trigger {
+  width: 36px;
+  height: 37px;
+  background: url('../src/ui/assets/ui/button-round.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding-bottom: 3px;
+}
+
+/* Pod 2 Center Group: button-stone.svg, hud-wood.svg, progress-frame.svg + progress-fill.svg */
+.hud-center-group {
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-plaque-turn {
+  background: url('../src/ui/assets/ui/button-stone.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 10px 22px 13px !important;
+  min-height: 50px;
+}
+
+.hud-plaque-turn .stat-label {
+  color: #e2f1ff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.hud-seed,
+.fps-badge {
+  color: #bae6fd !important;
+}
+
+.hud-plaque-wood {
+  background: url('../src/ui/assets/ui/hud-wood.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 18px 20px 18px !important;
+  min-height: 64px;
+}
+
+/* Population Progress Bar using ui/progress-frame.svg & ui/progress-fill.svg */
+.hud-plaque-ice {
+  position: relative;
+  width: 280px;
+  height: 56px;
+  padding: 0 !important;
+  background: url('../src/ui/assets/ui/progress-frame.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hud-plaque-ice .progress-track {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 19px;
+  height: 20px;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.hud-plaque-ice .progress-fill {
+  height: 100%;
+  background: url('../src/ui/assets/ui/progress-fill.svg') left center / 260px 20px no-repeat !important;
+  border-radius: 10px;
+  box-shadow: none !important;
+}
+
+.hud-plaque-ice .pop-header {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  padding: 2px 18px 0;
+  margin: 0;
+  color: #ffffff !important;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-shadow: 0 1px 3px rgba(8, 24, 48, 0.92), 0 0 6px rgba(8, 24, 48, 0.7);
+}
+
+.hud-plaque-ice .target-label {
+  color: #fde047 !important;
+}
+
+/* Pod 3: ui/pill-dark-wide.svg */
+.hud-pod-utils {
+  background: url('../src/ui/assets/ui/pill-dark-wide.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 9px 18px 11px !important;
+  min-height: 54px;
+}
+
+.util-chip.svg-chip-ice {
+  background: url('../src/ui/assets/ui/button-ice.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #0f2c52 !important;
+  font-weight: 800 !important;
+  padding: 6px 13px 8px !important;
+}
+
+/* ==================== LEFT EXPEDITION COMMAND SIDEBAR (ui/panel-sidebar.svg + ui/sign-wood.svg) ==================== */
+.expedition-sidebar {
+  top: 78px;
+  left: 14px;
+  bottom: 82px;
+  width: 222px;
+  padding: 44px 15px 14px !important;
+  background: url('../src/ui/assets/ui/panel-sidebar.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: 0 16px 34px rgba(10, 28, 54, 0.35) !important;
+  backdrop-filter: none !important;
+}
+
+.expedition-sidebar::before {
+  display: none !important;
+}
+
+.sidebar-realm-list {
+  gap: 6px;
+}
+
+/* Wooden Realm Sign Cards (ui/sign-wood.svg & ui/sign-wood-active.svg) */
+.wood-realm-card {
+  background: url('../src/ui/assets/ui/sign-wood.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 20px 18px 18px !important;
+  min-height: 98px;
+  text-shadow: 0 2px 0 #3b210f;
+}
+
+.level-card {
+  background: url('../src/ui/assets/ui/sign-wood.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 26px 20px 24px !important;
+  min-height: 126px;
+  text-shadow: 0 2px 0 #3b210f;
+}
+
+.wood-realm-card::before,
+.wood-realm-card::after,
+.level-card::before,
+.level-card::after {
+  display: none !important;
+}
+
+.wood-realm-card.active-realm,
+.wood-realm-card:hover:not(.locked),
+.level-card:hover:not(.locked) {
+  background-image: url('../src/ui/assets/ui/sign-wood-active.svg') !important;
+  box-shadow: none !important;
+  filter: brightness(1.05);
+}
+
+.sign-card-header,
+.wood-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.lock-pill {
+  font-size: 0.66rem;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(15, 28, 48, 0.55);
+  color: #cbd5e1;
+}
+
+/* ==================== INSPECTION TOOLTIP (ui/tooltip-ice.svg) ==================== */
+.map-tooltip {
+  background: url('../src/ui/assets/ui/tooltip-ice.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: 0 14px 28px rgba(8, 24, 48, 0.42) !important;
+  backdrop-filter: none !important;
+  padding: 22px 24px 26px !important;
+  width: 262px;
+  max-width: calc(100vw - 24px);
+  min-height: 142px;
+}
+
+.map-tooltip::before {
+  display: none !important;
+}
+
+.map-tooltip .tooltip-title {
+  border-bottom: none;
+  margin-bottom: 10px;
+  padding-bottom: 4px;
+}
+
+.tt-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.74rem;
+}
+
+.tt-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+/* ==================== BOTTOM TACTICAL DOCK (ui/pill-dark-wide.svg + ui/button-*.svg) ==================== */
+.dock-capsule {
+  background: url('../src/ui/assets/ui/pill-dark-wide.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: 0 10px 24px rgba(10, 28, 54, 0.38) !important;
+  backdrop-filter: none !important;
+  padding: 8px 16px 10px !important;
+}
+
+.dock-capsule::before {
+  top: -7px;
+  left: 24px;
+  right: 24px;
+  height: 14px;
+  background: url('../src/ui/assets/snow/snow-cap.svg') center / 100% 100% no-repeat !important;
+  box-shadow: none !important;
+}
+
+#btn-tool-auto.active,
+#btn-tool-beacon.active,
+#btn-tool-sever.active,
+.lens-btn[aria-pressed="true"] {
+  background: url('../src/ui/assets/ui/button-ice.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #0f2c52 !important;
+  font-weight: 800 !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.65);
+  padding: 7px 14px 9px !important;
+}
+
+#btn-tool-auto.active .dock-icon,
+#btn-tool-beacon.active .dock-icon,
+#btn-tool-sever.active .dock-icon,
+.lens-btn[aria-pressed="true"] .dock-icon {
+  filter: brightness(0.22) sepia(1) hue-rotate(185deg) saturate(4);
+}
+
+.btn-hint {
+  background: url('../src/ui/assets/ui/button-gold.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #2b1402 !important;
+  font-weight: 800 !important;
+  padding: 7px 14px 9px !important;
+}
+
+.btn-hint .dock-icon {
+  filter: brightness(0.22) sepia(1) hue-rotate(15deg) saturate(4);
+}
+
+.turn-undo-btn {
+  background: url('../src/ui/assets/ui/button-stone.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  color: #f1f5f9 !important;
+  padding: 7px 16px 10px !important;
+}
+
+.turn-undo-btn:disabled {
+  opacity: 0.62 !important;
+}
+
+.turn-end-btn {
+  background: url('../src/ui/assets/ui/button-primary.svg') center / 100% 100% no-repeat !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+  padding: 7px 22px 10px !important;
+  text-shadow: 0 2px 0 rgba(10, 32, 72, 0.65);
+}
+
+
+/* ==========================================================================
+   SOFTER, LESS RIGID UI (gentle motion, softer shadows, springy feedback)
+   ========================================================================== */
+.hud-pod, .dock-capsule, .expedition-sidebar, .map-tooltip, .hud-plaque, .modal-container {
+  filter: drop-shadow(0 6px 10px rgba(10, 28, 54, 0.22));
+}
+
+.hud-plaque-wood, .hud-plaque-turn {
+  animation: ui-bob 6s ease-in-out infinite;
+}
+.hud-plaque-wood + .hud-plaque-ice { animation: ui-bob 6s ease-in-out -2s infinite; }
+@keyframes ui-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+.seg-btn, .lens-btn, .turn-end-btn, .turn-undo-btn, .util-chip, .btn,
+.wood-realm-card, .level-card {
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease, background-image 0.2s ease !important;
+}
+.seg-btn:hover, .lens-btn:hover:not(:disabled), .turn-end-btn:hover, .util-chip:hover,
+.wood-realm-card:hover:not(.locked), .level-card:hover:not(.locked) {
+  transform: translateY(-3px) scale(1.04);
+}
+.seg-btn:active, .lens-btn:active, .turn-end-btn:active, .btn:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+.hud-toast, .map-tooltip {
+  animation: pop-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+.hud-legend-popover { border-radius: 18px; }
+.progress-track, .progress-fill { border-radius: 999px; }
+.screen.active .modal-container, .screen:not([hidden]) > .modal-container,
+.title-card { animation: pop-in 0.35s cubic-bezier(0.34, 1.4, 0.64, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-plaque-wood, .hud-plaque-turn, .hud-plaque-wood + .hud-plaque-ice { animation: none; }
+}

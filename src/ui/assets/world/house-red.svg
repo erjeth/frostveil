@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" >
+<defs></defs>
+
+<ellipse cx="60" cy="103" rx="48" ry="11" fill="#1d5fae" opacity=".2"/>
+<polygon points="22,62 60,80 60,102 22,84" fill="#f6e4c6"/>
+<polygon points="60,80 98,62 98,84 60,102" fill="#dcc29a"/>
+<polygon points="22,84 60,102 98,84 98,86 60,104 22,86" fill="#000" opacity=".12"/>
+<polygon points="31,70.3 43,76 43,94 31,88.3" fill="#7a4527"/>
+<polygon points="33,73 41,77 41,92 33,88" fill="#000" opacity=".18"/>
+<circle cx="39" cy="85" r="1.2" fill="#ffd54a"/>
+<polygon points="72,82.3 88,74.7 88,86.7 72,94.3" fill="#ffd76a" stroke="#6b3d22" stroke-width="2" stroke-linejoin="round"/>
+<path d="M80 78.5V90.5M72 88.3L88,80.7" stroke="#6b3d22" stroke-width="1.4"/>
+<polygon points="10,62 60,86 60,22" fill="#e0524a"/>
+<polygon points="60,86 110,62 60,22" fill="#b53a36"/>
+<polygon points="10,62 60,86 60,89 10,65" fill="#000" opacity=".2"/>
+<polygon points="60,86 110,62 110,65 60,89" fill="#000" opacity=".28"/>
+<polygon points="60,22 10,62 60,86" fill="none" stroke="#7a1f22" stroke-width="1.2" stroke-linejoin="round" opacity=".7"/>
+<path d="M60 22L27.5 48Q33 53 38 49Q44 57 50 51Q55 60 60 54Z" fill="#ffffff"/>
+<path d="M60 22L92.5 48Q87 53 82 49Q76 57 70 51Q65 60 60 54Z" fill="#dcecfb"/>
+<polygon points="79,26 91,26 91,46 79,38" fill="#8a4a3a"/>
+<polygon points="77,23 93,23 93,28 77,28" fill="#ffffff"/>
+
+</svg>
