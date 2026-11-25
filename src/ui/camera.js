@@ -11,9 +11,9 @@
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const TAU = Math.PI * 2;
-const DEFAULT_YAW = -0.28;
-const DEFAULT_TILT = 0.84;
-const DEFAULT_ZOOM = 0.9;
+const DEFAULT_YAW = -0.18;
+const DEFAULT_TILT = 0.96;
+const DEFAULT_ZOOM = 0.88;
 
 export class Camera {
   constructor() {

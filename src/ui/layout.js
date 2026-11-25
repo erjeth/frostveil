@@ -27,10 +27,11 @@ export function computeLayout(level, width, height) {
   }
 
   const isCompact = width < 760;
-  const padTop = isCompact ? 118 : 108;
-  const padBottom = isCompact ? 124 : 132;
-  const padLeft = Math.max(52, Math.round(width * 0.085));
-  const padRight = Math.max(52, Math.round(width * 0.085));
+  const hasSidebar = width > 940;
+  const padTop = isCompact ? 118 : 138;
+  const padBottom = isCompact ? 160 : 228;
+  const padLeft = hasSidebar ? 268 : Math.max(52, Math.round(width * 0.085));
+  const padRight = hasSidebar ? Math.max(82, Math.round(width * 0.075)) : Math.max(52, Math.round(width * 0.085));
 
   const availW = Math.max(160, width - padLeft - padRight);
   const availH = Math.max(160, height - padTop - padBottom);

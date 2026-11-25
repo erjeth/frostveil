@@ -228,11 +228,26 @@
         <button id="btn-game-restart" type="button" class="util-chip" title="Restart Level (R)">
           <span>Restart</span>
         </button>
-        <button id="btn-game-menu" type="button" class="util-chip" title="Return to Level Select (Esc)">
+        <button id="btn-game-menu" type="button" class="util-chip" title="Open Full Expedition &amp; Custom Realm Menu (Esc)">
           <span>Realms</span>
         </button>
       </div>
     </header>
+
+    <!-- Center-Top Embossed Hero Title Banner above the Floating Island (matching Image 1) -->
+    <div class="game-hero-banner" aria-hidden="true">
+      <div class="game-hero-eyebrow">ARCTIC CONTAINMENT STRATEGY</div>
+      <div class="game-hero-title">FROSTVEIL</div>
+    </div>
+
+    <!-- Left Expedition Command Sidebar with Snow-Capped Wooden Realm Cards (matching Image 1) -->
+    <aside id="game-expedition-sidebar" class="expedition-sidebar glass-panel" aria-label="Expedition Command Quick Realm Switcher">
+      <div class="expedition-sidebar-header">EXPEDITION COMMAND</div>
+      <div id="sidebar-realm-list" class="sidebar-realm-list" role="list">
+        <!-- Populated dynamically by screens.js -->
+      </div>
+      <div class="expedition-sidebar-footer" aria-hidden="true">⌄</div>
+    </aside>
 
     <!-- Floating feedback banner for invalid clicks / notifications -->
     <div id="hud-toast" class="hud-toast" role="status" aria-live="assertive" hidden></div>
