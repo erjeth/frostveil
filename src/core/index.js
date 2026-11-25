@@ -5,3 +5,17 @@ export { Graph } from './graph.js';
 export { bfsLayers } from './bfs.js';
 export { connectedComponents } from './components.js';
 export { articulationPointsAndBridges } from './tarjan.js';
+export {
+  NodeState,
+  createGameState,
+  applyAction,
+  undoAction,
+  endWardenPhase,
+  isContained,
+  blockedMask,
+  frostForecast,
+  safeZones,
+  evaluateOutcome,
+} from './simulation.js';
+export { generateLevel } from './levelGen.js';
+export { LEVEL_SPECS, buildLevel } from './levels.js';
