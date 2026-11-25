@@ -942,6 +942,53 @@ export class Renderer {
   }
 
   /**
+   * Draws a 3D wooden fishing dock / pier jutting onto a frozen pond.
+   */
+  _drawWoodenDock3D(ctx, cam, wx, wy, rw, rot = 0.25) {
+    const c = Math.cos(rot);
+    const s = Math.sin(rot);
+    const len = rw * 1.35;
+    const wid = rw * 0.42;
+    const corners = [
+      [-len, -wid],
+      [len, -wid],
+      [len, wid],
+      [-len, wid]
+    ].map(([x, y]) => [x * c - y * s, x * s + y * c]);
+
+    // 4 timber posts into the ice
+    const postBox = this._box(rw * 0.08);
+    for (let i = 0; i < corners.length; i++) {
+      this._prism(
+        ctx,
+        cam,
+        wx + corners[i][0] * 0.85,
+        wy + corners[i][1] * 0.85,
+        postBox,
+        0,
+        rw * 0.42,
+        [98, 58, 28],
+        '#8c5828',
+        'rgba(40, 22, 8, 0.45)'
+      );
+    }
+
+    // Wooden plank deck
+    this._prism(
+      ctx,
+      cam,
+      wx,
+      wy,
+      corners,
+      rw * 0.18,
+      rw * 0.30,
+      [142, 88, 44],
+      '#a86b34',
+      'rgba(55, 30, 12, 0.5)'
+    );
+  }
+
+  /**
    * Draws the map as a low-poly floating snowy iceberg island with jagged blue glacier
    * cliffs below, turquoise frozen ponds, and floating satellite ice rocks (Reference Image 1).
    */
@@ -1057,6 +1104,26 @@ export class Renderer {
     ctx.lineWidth = 2.2;
     ctx.stroke();
 
+    // 2b. Hanging 3D white-and-cyan icicles dripping from the front snow overhang
+    for (let i = 7; i <= 14; i++) {
+      const j = (i + 1) % n;
+      for (let k = 1; k <= 2; k++) {
+        const frac = k / 3;
+        const ix = ring[i][0] * (1 - frac) + ring[j][0] * frac;
+        const iy = ring[i][1] * (1 - frac) + ring[j][1] * frac;
+        const icicleLen = 22 + ((i * 7 + k * 11) % 3) * 12;
+        const bL = this._p(cam, ix - 5, iy, -10);
+        const bR = this._p(cam, ix + 5, iy, -10);
+        const tip = this._p(cam, ix, iy, -10 - icicleLen);
+        ctx.fillStyle = k === 1 ? '#e2f4ff' : '#bae6fd';
+        ctx.strokeStyle = 'rgba(125, 200, 248, 0.65)';
+        ctx.lineWidth = 1;
+        this._poly(ctx, [bL, bR, tip]);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+
     // 3. Low-poly snow facet lines across the snow surface
     const centerPt = this._p(cam, 0, 0, 0);
     ctx.strokeStyle = 'rgba(175, 212, 245, 0.38)';
@@ -1116,9 +1183,57 @@ export class Renderer {
       ctx.stroke();
     }
 
-    // 5. Floating satellite snow-capped ice islets below the front cliffs
+    // 4b. 3D Wooden fishing piers jutting onto the frozen ponds
+    const dockScale = Math.max(layout.baseRadius, 17.5);
+    this._drawWoodenDock3D(ctx, cam, -hw * 0.33, -hh * 0.19, dockScale * 0.95, 0.35);
+    this._drawWoodenDock3D(ctx, cam, hw * 0.36, hh * 0.38, dockScale * 1.12, 0.48);
+    this._drawWoodenDock3D(ctx, cam, hw * 0.52, hh * 0.22, dockScale * 0.92, -0.4);
+
+    // 5. Floating satellite snow-capped ice islets below the front cliffs + scenic mini props
     this._drawSatelliteIslet(ctx, cam, -hw * 0.24, hh * 0.94, hw * 0.16, hh * 0.11, -38, 105);
+    // Tiny wooden explorer shelter on front-left satellite islet
+    this._pyramid(
+      ctx,
+      cam,
+      -hw * 0.22,
+      hh * 0.94,
+      this._box(dockScale * 0.65),
+      -38,
+      -38 + dockScale * 1.0,
+      [148, 92, 44],
+      'rgba(55, 30, 12, 0.55)'
+    );
+
     this._drawSatelliteIslet(ctx, cam, hw * 0.26, hh * 0.96, hw * 0.13, hh * 0.09, -46, 95);
+    // Glowing cyan crystal cluster on front-right satellite islet
+    const cR = dockScale * 0.58;
+    this._crystal(
+      ctx,
+      cam,
+      hw * 0.26,
+      hh * 0.96,
+      this._ngon(cR, 6, 0.2),
+      -46 + cR * 0.8,
+      -46 + cR * 2.6,
+      -46,
+      [72, 212, 255],
+      'rgba(224, 248, 255, 0.9)',
+      0.95
+    );
+    this._crystal(
+      ctx,
+      cam,
+      hw * 0.26 - cR * 0.85,
+      hh * 0.96 + cR * 0.3,
+      this._ngon(cR * 0.72, 6, 0.6),
+      -46 + cR * 0.5,
+      -46 + cR * 1.85,
+      -46,
+      [56, 189, 248],
+      'rgba(224, 248, 255, 0.85)',
+      0.92
+    );
+
     this._drawSatelliteIslet(ctx, cam, -hw * 0.82, hh * 0.72, hw * 0.09, hh * 0.07, -52, 75);
 
     ctx.restore();
@@ -1174,30 +1289,61 @@ export class Renderer {
       { type: 'rock', nx: 0.86, ny: 0.78, scale: 1.35 },
       { type: 'tree', nx: 0.92, ny: 0.46, scale: 1.55 },
       { type: 'tree', nx: -0.42, ny: -0.96, scale: 1.45 },
-      { type: 'tree', nx: 0.36, ny: -0.97, scale: 1.50 }
+      { type: 'tree', nx: 0.36, ny: -0.97, scale: 1.50 },
+      // Extra dense pine clusters along upper-right & left headlands (matching Image 1)
+      { type: 'tree', nx: 0.48, ny: -0.92, scale: 1.80 },
+      { type: 'tree', nx: 0.56, ny: -0.86, scale: 1.50 },
+      { type: 'tree', nx: -0.94, ny: -0.46, scale: 1.70 },
+      { type: 'tree', nx: -0.52, ny: 0.84, scale: 1.65 },
+      // Interior scenic 3D Alpine Watermill Lodges (placed in open snow pockets)
+      { type: 'lodge', nx: -0.22, ny: -0.56, scale: 1.55 },
+      { type: 'lodge', nx: -0.56, ny: 0.22, scale: 1.50 },
+      { type: 'lodge', nx: -0.34, ny: 0.48, scale: 1.48 },
+      { type: 'lodge', nx: 0.04, ny: 0.68, scale: 1.62 },
+      { type: 'lodge', nx: 0.32, ny: -0.22, scale: 1.50 },
+      { type: 'lodge', nx: 0.24, ny: 0.18, scale: 1.52 },
+      // Explorer A-frame Canvas Tents & Firewood Log Piles
+      { type: 'tent', nx: -0.78, ny: -0.28, scale: 1.25 },
+      { type: 'tent', nx: 0.38, ny: 0.46, scale: 1.28 },
+      // Cute 3D Arctic Penguins by the frozen ponds
+      { type: 'penguin', nx: -0.52, ny: -0.32, scale: 1.0 },
+      { type: 'penguin', nx: -0.22, ny: 0.58, scale: 1.0 },
+      { type: 'penguin', nx: 0.32, ny: 0.54, scale: 1.0 }
     ];
 
-    const minClearance = layout.baseRadius * 1.95;
     const valid = [];
 
     for (let i = 0; i < candidates.length; i++) {
       const c = candidates[i];
       const wx = c.nx * hw;
       const wy = c.ny * hh;
+      // Interior lodges check a comfortable clearance from settlement nodes; penguins/tents are smaller
+      const reqDist =
+        c.type === 'lodge'
+          ? layout.baseRadius * 1.85
+          : c.type === 'tent'
+          ? layout.baseRadius * 1.55
+          : c.type === 'penguin'
+          ? layout.baseRadius * 1.25
+          : layout.baseRadius * 1.75;
+
       let clear = true;
       for (let j = 0; j < layout.nodes.length; j++) {
         const nd = layout.nodes[j];
-        if (Math.hypot(wx - nd.wx, wy - nd.wy) < minClearance) {
+        const minD = nd.isCitadel ? reqDist * 1.35 : reqDist;
+        if (Math.hypot(wx - nd.wx, wy - nd.wy) < minD) {
           clear = false;
           break;
         }
       }
       if (clear) {
+        const propBase = Math.max(layout.baseRadius, 17.5);
         valid.push({
           type: c.type,
           wx,
           wy,
-          size: layout.baseRadius * 0.95 * c.scale
+          size: propBase * c.scale,
+          seed: i
         });
       }
     }
@@ -1249,6 +1395,256 @@ export class Renderer {
   }
 
   /**
+   * Draws a scenic 3D Medieval Alpine Watermill Lodge with snow-covered gable roof,
+   * stone chimney with smoke puffs, wooden waterwheel, and fence (Reference Image 1).
+   */
+  _drawWatermillLodge3D(ctx, cam, wx, wy, size, t) {
+    const edge = 'rgba(38, 22, 10, 0.45)';
+    const w = size * 0.72;
+    const d = size * 0.54;
+    const rectRing = [
+      [-w, -d],
+      [w, -d],
+      [w, d],
+      [-w, d]
+    ];
+
+    // Contact shadow
+    const cp = this._p(cam, wx, wy, 0);
+    ctx.save();
+    ctx.fillStyle = 'rgba(24, 68, 122, 0.22)';
+    ctx.beginPath();
+    ctx.ellipse(cp.x + 4, cp.y + 4, w * 1.35 * cp.f, d * 1.1 * cp.f, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 1. Stone foundation plinth
+    this._prism(ctx, cam, wx, wy, rectRing, 0, size * 0.22, [110, 124, 142], null, edge);
+
+    // 2. Warm timber lodge walls
+    const wallH = size * 0.86;
+    this._prism(ctx, cam, wx, wy, rectRing, size * 0.22, wallH, [154, 96, 48], null, edge);
+
+    // Glowing window on front wall
+    const winPt = this._p(cam, wx, wy + d * 1.02, size * 0.54);
+    const wr = Math.max(2, size * 0.13 * winPt.f);
+    ctx.fillStyle = '#fef08a';
+    ctx.shadowColor = '#f59e0b';
+    ctx.shadowBlur = 7;
+    ctx.fillRect(winPt.x - wr * 1.2, winPt.y - wr * 0.9, wr * 2.4, wr * 1.8);
+    ctx.shadowBlur = 0;
+
+    // 3. Thick overhanging white snow-blanketed gable roof
+    const ew = w * 1.18;
+    const ed = d * 1.22;
+    const ridgeH = wallH + size * 0.68;
+    const eaveL1 = this._p(cam, wx - ew, wy - ed, wallH);
+    const eaveR1 = this._p(cam, wx + ew, wy - ed, wallH);
+    const eaveR2 = this._p(cam, wx + ew, wy + ed, wallH);
+    const eaveL2 = this._p(cam, wx - ew, wy + ed, wallH);
+    const ridgeL = this._p(cam, wx - ew * 0.92, wy, ridgeH);
+    const ridgeR = this._p(cam, wx + ew * 0.92, wy, ridgeH);
+
+    // Back roof slope
+    const backSlope = [eaveL1, eaveR1, ridgeR, ridgeL];
+    if (this._area(backSlope) > 0.3) {
+      this._poly(ctx, backSlope);
+      ctx.fillStyle = '#d8ebfc';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(140, 185, 228, 0.7)';
+      ctx.stroke();
+    }
+    // Gable timber triangles (left and right)
+    for (const tri of [
+      [eaveL2, eaveL1, ridgeL],
+      [eaveR1, eaveR2, ridgeR]
+    ]) {
+      if (this._area(tri) > 0.3) {
+        this._poly(ctx, tri);
+        ctx.fillStyle = '#8c5426';
+        ctx.fill();
+        ctx.strokeStyle = edge;
+        ctx.stroke();
+      }
+    }
+    // Front snow-blanketed roof slope
+    const frontSlope = [eaveR2, eaveL2, ridgeL, ridgeR];
+    if (this._area(frontSlope) > 0.3) {
+      this._poly(ctx, frontSlope);
+      ctx.fillStyle = '#f6fbff';
+      ctx.fill();
+      ctx.strokeStyle = '#c4dff6';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // 4. Stone chimney + rising white smoke puffs
+    const chimTop = this._prism(
+      ctx,
+      cam,
+      wx - w * 0.35,
+      wy - d * 0.2,
+      this._box(size * 0.16),
+      wallH + size * 0.2,
+      ridgeH + size * 0.28,
+      [120, 134, 152],
+      '#64748b',
+      edge
+    );
+    if (chimTop && chimTop[0]) {
+      const cx = (chimTop[0].x + chimTop[2].x) * 0.5;
+      const cy = (chimTop[0].y + chimTop[2].y) * 0.5;
+      const drift = (((t * 0.6 + wx * 0.01) % 1) + 1) % 1;
+      ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, 0.55 * (1 - drift)).toFixed(2)})`;
+      ctx.beginPath();
+      ctx.arc(cx + drift * 8, cy - 5 - drift * 16, Math.max(1, (3.5 + drift * 5) * cp.f), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 5. 3D Wooden Waterwheel on the right wall
+    const wheelCenter = this._p(cam, wx + w * 1.06, wy + d * 0.1, size * 0.44);
+    const wheelR = size * 0.36 * wheelCenter.f;
+    ctx.strokeStyle = '#5c3414';
+    ctx.lineWidth = Math.max(2, 2.8 * wheelCenter.f);
+    ctx.fillStyle = 'rgba(120, 70, 30, 0.55)';
+    ctx.beginPath();
+    ctx.ellipse(wheelCenter.x, wheelCenter.y, wheelR * 0.72, wheelR, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // Waterwheel spokes
+    ctx.lineWidth = 1.2;
+    for (let s = 0; s < 4; s++) {
+      const ang = t * 0.8 + (s * Math.PI) / 4;
+      ctx.beginPath();
+      ctx.moveTo(wheelCenter.x - Math.cos(ang) * wheelR * 0.68, wheelCenter.y - Math.sin(ang) * wheelR * 0.95);
+      ctx.lineTo(wheelCenter.x + Math.cos(ang) * wheelR * 0.68, wheelCenter.y + Math.sin(ang) * wheelR * 0.95);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draws a 3D tan canvas Explorer A-frame Tent and stacked firewood log pile.
+   */
+  _drawCampTent3D(ctx, cam, wx, wy, size) {
+    const w = size * 0.55;
+    const d = size * 0.45;
+    const h = size * 0.78;
+    const pFL = this._p(cam, wx - w, wy + d, 0);
+    const pFR = this._p(cam, wx + w, wy + d, 0);
+    const pBL = this._p(cam, wx - w, wy - d, 0);
+    const pBR = this._p(cam, wx + w, wy - d, 0);
+    const pTopF = this._p(cam, wx, wy + d, h);
+    const pTopB = this._p(cam, wx, wy - d, h);
+
+    ctx.save();
+    // Side canvas slope
+    this._poly(ctx, [pFR, pBR, pTopB, pTopF]);
+    ctx.fillStyle = '#d4a359';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(92, 58, 22, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Front A-frame opening
+    this._poly(ctx, [pFL, pFR, pTopF]);
+    ctx.fillStyle = '#e8c17d';
+    ctx.fill();
+    ctx.stroke();
+
+    // Dark tent interior doorway
+    const pDoorL = this._p(cam, wx - w * 0.35, wy + d, 0);
+    const pDoorR = this._p(cam, wx + w * 0.35, wy + d, 0);
+    const pDoorT = this._p(cam, wx, wy + d, h * 0.62);
+    this._poly(ctx, [pDoorL, pDoorR, pDoorT]);
+    ctx.fillStyle = '#4a2c11';
+    ctx.fill();
+
+    // Stacked firewood log pile beside tent with snow cap
+    this._prism(
+      ctx,
+      cam,
+      wx + w * 1.45,
+      wy,
+      this._box(size * 0.28),
+      0,
+      size * 0.32,
+      [122, 74, 34],
+      '#f4f9ff',
+      'rgba(60, 32, 12, 0.45)'
+    );
+    ctx.restore();
+  }
+
+  /**
+   * Draws a cute 3D Arctic Penguin standing on the snow near the frozen ponds.
+   */
+  _drawPenguin3D(ctx, cam, wx, wy, size) {
+    const p = this._p(cam, wx, wy, size * 0.22);
+    const r = Math.max(3, size * 0.26 * p.f);
+    ctx.save();
+    // Dark body
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, r * 0.78, r * 1.15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // White belly
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath();
+    ctx.ellipse(p.x + r * 0.1, p.y + r * 0.15, r * 0.46, r * 0.78, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Orange beak & feet
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(p.x + r * 0.65, p.y - r * 0.45, r * 0.24, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /**
+   * Draws a 3D wooden street-lamp post with a glowing warm amber lantern beside a settlement.
+   */
+  _drawLanternPost3D(ctx, cam, wx, wy, rw) {
+    const px = wx - rw * 0.78;
+    const py = wy - rw * 0.15;
+    const postH = rw * 1.38;
+    const base = this._p(cam, px, py, 2);
+    const top = this._p(cam, px, py, postH);
+    const arm = this._p(cam, px + rw * 0.38, py, postH);
+    const lamp = this._p(cam, px + rw * 0.38, py, postH - rw * 0.24);
+
+    ctx.save();
+    // Wooden post & horizontal gallows arm
+    ctx.strokeStyle = '#6b421d';
+    ctx.lineWidth = Math.max(1.8, 2.4 * base.f);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(base.x, base.y);
+    ctx.lineTo(top.x, top.y);
+    ctx.lineTo(arm.x, arm.y);
+    ctx.stroke();
+
+    // Glowing lantern halo
+    const glowR = rw * 0.46 * lamp.f;
+    const grad = ctx.createRadialGradient(lamp.x, lamp.y, 0, lamp.x, lamp.y, glowR);
+    grad.addColorStop(0, 'rgba(254, 240, 138, 0.95)');
+    grad.addColorStop(0.45, 'rgba(245, 158, 11, 0.55)');
+    grad.addColorStop(1, 'rgba(245, 158, 11, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(lamp.x, lamp.y, glowR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Lantern core
+    const lr = Math.max(1.8, rw * 0.12 * lamp.f);
+    ctx.fillStyle = '#fffbeb';
+    ctx.strokeStyle = '#b45309';
+    ctx.lineWidth = 1;
+    ctx.fillRect(lamp.x - lr, lamp.y - lr, lr * 2, lr * 2.2);
+    ctx.strokeRect(lamp.x - lr, lamp.y - lr, lr * 2, lr * 2.2);
+    ctx.restore();
+  }
+
+  /**
    * Draws every settlement, the multi-tower Citadel, and scenic 3D pine trees/rocks,
    * depth-sorted back to front.
    */
@@ -1283,6 +1679,12 @@ export class Renderer {
         const pr = item.prop;
         if (pr.type === 'tree') {
           this._drawPineTree3D(ctx, cam, pr.wx, pr.wy, pr.size);
+        } else if (pr.type === 'lodge') {
+          this._drawWatermillLodge3D(ctx, cam, pr.wx, pr.wy, pr.size, t);
+        } else if (pr.type === 'tent') {
+          this._drawCampTent3D(ctx, cam, pr.wx, pr.wy, pr.size);
+        } else if (pr.type === 'penguin') {
+          this._drawPenguin3D(ctx, cam, pr.wx, pr.wy, pr.size);
         } else {
           this._drawRock3D(ctx, cam, pr.wx, pr.wy, pr.size);
         }
@@ -1428,21 +1830,33 @@ export class Renderer {
     const warded = st === NodeState.WARDED;
     const edge = 'rgba(20, 42, 74, 0.42)';
 
-    // ---- The Citadel: Grand Multi-Tower Golden Castle (matching Image 1) ----
+    // ---- The Citadel: Grand Medieval Stone-and-Timber Castle with Red Turrets, Gold Spire & Drawbridge (Image 1) ----
     if (node.isCitadel) {
-      const a = rw * 0.78;
-      const H = rw * 1.95;
-      const wall = frosted ? [150, 215, 245] : [238, 182, 54];
-      const turretCol = frosted ? [170, 225, 250] : [248, 198, 72];
-      const spireCol = frosted ? [205, 245, 255] : [255, 216, 84];
+      const cRw = Math.max(rw * 1.35, 24);
+      const a = cRw * 0.92;
+      const H = cRw * 2.25;
+      const stoneWall = frosted ? [130, 195, 232] : [108, 122, 142];
+      const stoneDark = frosted ? [105, 175, 215] : [82, 96, 115];
+      const parapetCol = frosted ? [155, 218, 248] : [188, 72, 52];
+      const turretRoofCol = frosted ? [175, 230, 252] : [206, 64, 44];
+      const goldSpireCol = frosted ? [205, 245, 255] : [248, 188, 42];
 
-      // Stepped golden plinth
-      this._prism(ctx, cam, wx, wy, this._box(a * 1.18), 3, rw * 0.25, wall, this._shade(wall, 1.08), edge);
+      // 1. Wide stone fortress plinth + 3D wooden entrance drawbridge extending forward-right
+      this._prism(ctx, cam, wx, wy, this._box(a * 1.24), 3, rw * 0.30, stoneDark, '#94a3b8', edge);
 
-      // Sort the 4 corner turrets + central keep by distance from camera
-      const tOffset = a * 0.88;
-      const turretR = a * 0.34;
-      const turretH = H * 0.88;
+      // Wooden entrance bridge with side handrails extending from front wall
+      const bridgeRing = [
+        [-a * 0.32, a * 0.85],
+        [a * 0.32, a * 0.85],
+        [a * 0.42, a * 1.68],
+        [-a * 0.22, a * 1.68]
+      ];
+      this._prism(ctx, cam, wx, wy, bridgeRing, 2, rw * 0.34, [138, 84, 38], '#a66832', edge);
+
+      // 2. Sort the 4 corner stone towers + central tall keep by distance from camera
+      const tOffset = a * 0.92;
+      const turretR = a * 0.36;
+      const turretH = H * 0.86;
       const parts = [
         { kind: 'keep', x: wx, y: wy, z: this._p(cam, wx, wy, H * 0.5).z },
         { kind: 'turret', x: wx - tOffset, y: wy - tOffset, z: this._p(cam, wx - tOffset, wy - tOffset, turretH * 0.5).z },
@@ -1456,85 +1870,127 @@ export class Renderer {
       for (let i = 0; i < parts.length; i++) {
         const pt = parts[i];
         if (pt.kind === 'turret') {
+          // Stone cylindrical tower shaft
           this._prism(
             ctx,
             cam,
             pt.x,
             pt.y,
             this._ngon(turretR, 8),
-            rw * 0.25,
-            turretH,
-            turretCol,
-            this._shade(turretCol, 1.1),
+            rw * 0.28,
+            turretH * 0.82,
+            stoneWall,
+            null,
             edge
           );
-          this._pyramid(
+          // Red-brick flared upper battlement collar
+          this._prism(
             ctx,
             cam,
             pt.x,
             pt.y,
             this._ngon(turretR * 1.12, 8),
+            turretH * 0.82,
             turretH,
-            turretH + rw * 0.48,
-            spireCol,
+            parapetCol,
+            this._shade(parapetCol, 1.08),
             edge
           );
+          // Conical terracotta-red tower roof + mini pennant flag
+          const tTip = this._pyramid(
+            ctx,
+            cam,
+            pt.x,
+            pt.y,
+            this._ngon(turretR * 1.18, 8),
+            turretH,
+            turretH + rw * 0.68,
+            turretRoofCol,
+            edge
+          );
+          if (tTip) {
+            const pH = rw * 0.24 * node.f;
+            ctx.strokeStyle = '#78350f';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(tTip.x, tTip.y);
+            ctx.lineTo(tTip.x, tTip.y - pH);
+            ctx.stroke();
+            ctx.fillStyle = frosted ? '#38bdf8' : '#dc2626';
+            ctx.beginPath();
+            ctx.moveTo(tTip.x, tTip.y - pH);
+            ctx.lineTo(tTip.x + rw * 0.22 * node.f, tTip.y - pH * 0.7);
+            ctx.lineTo(tTip.x, tTip.y - pH * 0.35);
+            ctx.closePath();
+            ctx.fill();
+          }
         } else {
-          // Central tall castle keep
-          this._prism(ctx, cam, wx, wy, this._box(a * 0.78), rw * 0.25, H, wall, this._shade(wall, 1.06), edge);
+          // Central tall stone keep + warm timber upper gallery + golden pyramid spire
+          this._prism(ctx, cam, wx, wy, this._box(a * 0.82), rw * 0.28, H * 0.72, stoneWall, null, edge);
+          this._prism(
+            ctx,
+            cam,
+            wx,
+            wy,
+            this._box(a * 0.88),
+            H * 0.72,
+            H,
+            parapetCol,
+            this._shade(parapetCol, 1.06),
+            edge
+          );
           keepTip = this._pyramid(
             ctx,
             cam,
             wx,
             wy,
-            this._box(a * 0.86),
+            this._box(a * 0.94),
             H,
-            H + rw * 0.92,
-            spireCol,
+            H + rw * 1.15,
+            goldSpireCol,
             edge
           );
 
-          // Arched fortress gate on the front-most keep wall
-          const sides = [[0, a * 0.79], [a * 0.79, 0], [0, -a * 0.79], [-a * 0.79, 0]];
-          let frontGate = null;
-          for (let s = 0; s < sides.length; s++) {
-            const p = this._p(cam, wx + sides[s][0], wy + sides[s][1], rw * 0.52);
-            if (!frontGate || p.z < frontGate.z) frontGate = p;
-          }
-          if (frontGate) {
-            const gw = Math.max(2.5, rw * 0.16 * node.f);
-            const gh = Math.max(4, rw * 0.28 * node.f);
-            ctx.fillStyle = '#5c3409';
-            ctx.beginPath();
-            ctx.arc(frontGate.x, frontGate.y - gh * 0.2, gw, Math.PI, 0);
-            ctx.lineTo(frontGate.x + gw, frontGate.y + gh * 0.5);
-            ctx.lineTo(frontGate.x - gw, frontGate.y + gh * 0.5);
-            ctx.closePath();
-            ctx.fill();
-          }
+          // Arched fortress gate with warm torchlight on the front wall
+          const frontGate = this._p(cam, wx + a * 0.05, wy + a * 0.84, rw * 0.58);
+          const gw = Math.max(3.5, rw * 0.22 * node.f);
+          const gh = Math.max(5.5, rw * 0.38 * node.f);
+          ctx.fillStyle = '#1e1b18';
+          ctx.strokeStyle = '#d97706';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(frontGate.x, frontGate.y - gh * 0.2, gw, Math.PI, 0);
+          ctx.lineTo(frontGate.x + gw, frontGate.y + gh * 0.5);
+          ctx.lineTo(frontGate.x - gw, frontGate.y + gh * 0.5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
         }
       }
 
-      // Pennant flag & glowing crown jewel atop the central keep spire
+      // Large fluttering crimson banner flag atop the central golden spire
       if (keepTip) {
-        const poleH = rw * 0.36 * node.f;
-        ctx.strokeStyle = '#fef08a';
-        ctx.lineWidth = 1.6;
+        const poleH = rw * 0.48 * node.f;
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 1.8;
         ctx.beginPath();
         ctx.moveTo(keepTip.x, keepTip.y);
         ctx.lineTo(keepTip.x, keepTip.y - poleH);
         ctx.stroke();
 
-        ctx.fillStyle = frosted ? '#38bdf8' : '#f59e0b';
+        ctx.fillStyle = frosted ? '#38bdf8' : '#dc2626';
         ctx.beginPath();
         ctx.moveTo(keepTip.x, keepTip.y - poleH);
-        ctx.lineTo(keepTip.x + rw * 0.32 * node.f, keepTip.y - poleH * 0.72);
-        ctx.lineTo(keepTip.x, keepTip.y - poleH * 0.42);
+        ctx.lineTo(keepTip.x + rw * 0.42 * node.f, keepTip.y - poleH * 0.72);
+        ctx.lineTo(keepTip.x, keepTip.y - poleH * 0.38);
         ctx.closePath();
         ctx.fill();
       }
-      return H + rw * 1.1;
+      return H + rw * 1.25;
     }
+
+    // ---- Draw a 3D glowing street-lamp lantern post beside every settlement pedestal ----
+    this._drawLanternPost3D(ctx, cam, wx, wy, rw);
 
     // ---- Frosted settlement: crystalline ice spikes around the frozen cabin ----
     if (frosted) {

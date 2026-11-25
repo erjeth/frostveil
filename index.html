@@ -180,24 +180,20 @@
         </div>
       </div>
 
-      <!-- Pod 2: Center Tactical Status & Population Gauge -->
-      <div class="hud-pod hud-pod-center glass-panel">
-        <div class="hud-metric">
-          <span class="stat-label">Turn</span>
+      <!-- Pod 2: Center Tactical Status Plaques (Chiseled Stone, Carved Wood & Ice-Crystal Gauge) -->
+      <div class="hud-center-group">
+        <div class="hud-plaque hud-plaque-turn">
+          <span class="stat-label">TURN</span>
           <strong id="hud-turn" class="stat-value">1</strong>
         </div>
 
-        <div class="hud-vsep"></div>
-
-        <div class="hud-metric">
-          <span class="stat-label">Actions</span>
+        <div class="hud-plaque hud-plaque-wood">
+          <span class="stat-label">ACTIONS</span>
           <strong id="hud-actions" class="stat-value">1 / 1</strong>
         </div>
 
-        <div class="hud-vsep"></div>
-
-        <!-- Population Gauge -->
-        <div class="hud-gauge">
+        <!-- Ice-Crystal Population Gauge -->
+        <div class="hud-plaque hud-plaque-ice">
           <div class="pop-header">
             <span id="hud-pop-text">Saved 65/71 (92%)</span>
             <span id="hud-target-text" class="target-label">Goal 50%</span>
@@ -208,11 +204,9 @@
           </div>
         </div>
 
-        <div class="hud-vsep"></div>
-
-        <div class="hud-metric" id="hud-citadel-pill">
-          <span class="stat-label">Citadel</span>
-          <strong id="hud-citadel" class="stat-value status-safe">Safe</strong>
+        <div class="hud-plaque hud-plaque-wood hud-plaque-icicles" id="hud-citadel-pill">
+          <span class="stat-label">CITADEL</span>
+          <strong id="hud-citadel" class="stat-value status-safe">SAFE</strong>
         </div>
       </div>
 
@@ -237,7 +231,10 @@
     <!-- Center-Top Embossed Hero Title Banner above the Floating Island (matching Image 1) -->
     <div class="game-hero-banner" aria-hidden="true">
       <div class="game-hero-eyebrow">ARCTIC CONTAINMENT STRATEGY</div>
-      <div class="game-hero-title">FROSTVEIL</div>
+      <div class="game-hero-title-wrap">
+        <div class="game-hero-title" data-text="FROSTVEIL">FROSTVEIL</div>
+        <div class="game-hero-snowcap">FROSTVEIL</div>
+      </div>
     </div>
 
     <!-- Left Expedition Command Sidebar with Snow-Capped Wooden Realm Cards (matching Image 1) -->

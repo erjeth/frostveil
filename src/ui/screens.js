@@ -78,6 +78,15 @@ export class ScreenManager {
     });
   }
 
+  _buildNamedLevel(id) {
+    const numId = Number(id) || 1;
+    const spec = LEVEL_SPECS.find((s) => s.id === numId) || LEVEL_SPECS[0];
+    const level = buildLevel(spec.id);
+    level.id = spec.id;
+    level.name = spec.name;
+    return level;
+  }
+
   /**
    * Switches the active visible screen.
    * @param {'title' | 'levels' | 'game' | 'result' | 'howto' | 'arena'} name
@@ -195,7 +204,7 @@ export class ScreenManager {
         const val = Number(arenaLevelSel.value);
         const level = val === 0 && this._customFreePlayLevel
           ? this._customFreePlayLevel
-          : buildLevel(val || 1);
+          : this._buildNamedLevel(val || 1);
         this._populateArenaStrategies(level);
         this.cb.onArenaLevelLoaded(level);
       });
@@ -310,7 +319,7 @@ export class ScreenManager {
         card.addEventListener('click', () => {
           this.audio.playClick();
           this._activeLevelId = spec.id;
-          const level = buildLevel(spec.id);
+          const level = this._buildNamedLevel(spec.id);
           this.cb.onStartLevel(level, `Level ${spec.id}: ${spec.name}`);
         });
       }
@@ -352,6 +361,8 @@ export class ScreenManager {
 
       btn.innerHTML = `
         <div class="wood-snow-cap" aria-hidden="true"></div>
+        <span class="wood-rope wood-rope-left" aria-hidden="true"></span>
+        <span class="wood-rope wood-rope-right" aria-hidden="true"></span>
         <div class="wood-card-top">
           <span class="wood-realm-num">REALM ${spec.id}</span>
           <span class="wood-realm-stars">${starsHtml}</span>
@@ -364,7 +375,7 @@ export class ScreenManager {
         btn.addEventListener('click', () => {
           this.audio.playClick();
           this._activeLevelId = spec.id;
-          const level = buildLevel(spec.id);
+          const level = this._buildNamedLevel(spec.id);
           this.cb.onStartLevel(level, `Level ${spec.id}: ${spec.name}`);
         });
       }
@@ -484,7 +495,7 @@ export class ScreenManager {
       btnNext.onclick = () => {
         this.audio.playClick();
         if (hasNext) {
-          const nextLvl = buildLevel(level.id + 1);
+          const nextLvl = this._buildNamedLevel(level.id + 1);
           this.cb.onStartLevel(nextLvl, `Level ${nextLvl.id}: ${nextLvl.name}`);
         }
       };
@@ -540,7 +551,7 @@ export class ScreenManager {
 
     const level = levelId === 0 && this._customFreePlayLevel
       ? this._customFreePlayLevel
-      : buildLevel(levelId || 1);
+      : this._buildNamedLevel(levelId || 1);
 
     this._populateArenaStrategies(level);
     this.showScreen('arena');
